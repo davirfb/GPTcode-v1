@@ -1,0 +1,107 @@
+{% extends 'base.html' %} {% block title %}Contato | GPTCode{% endblock %} {% block content %}
+
+<!-- Header da Página -->
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Entre em Contato</h1>
+    <p class="lead text-white-50">
+      Conecte-se conosco para colaborações, oportunidades e informações
+    </p>
+  </div>
+</header>
+
+<!-- Conteúdo Principal -->
+<div class="container py-5">
+  <!-- Informações de Contato -->
+  <div class="row mb-5 justify-content-center">
+    <div class="col-12 col-md-6 col-lg-auto mb-4 d-flex justify-content-center">
+      <div class="contact-info-card text-center contact-card-max-width">
+        <div class="contact-icon">
+          <i class="bi bi-geo-alt-fill"></i>
+        </div>
+        <h5>Localização</h5>
+        <a
+          href="https://www.google.com/maps/place//data=!4m2!3m1!1s0x935a3b1e02415707:0x3060d8a3139ab079?sa=X&ved=1t:8290&ictx=111"
+        >
+          SGAN Quadra 610
+          St. de Grandes Áreas Norte
+           Brasília - DF</br>
+          
+        </a>
+        <p class="small text-muted">CEP: 70830-450</p>
+
+        
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-auto mb-4 d-flex justify-content-center">
+      <div class="contact-info-card text-center contact-card-max-width">
+        <div class="contact-icon">
+          <i class="bi bi-envelope-fill"></i>
+        </div>
+        <h5>E-mail</h5>
+        <p>
+          <a href="mailto:gptcode@gptcode.com.br">gptcode@gptcode.com.br</a>
+        </p>
+        <p class="small text-muted">Coordenação do GPTCode</p>
+      </div>
+    </div>
+    <!--
+    <div class="col-12 col-md-6 col-lg-auto mb-4 d-flex justify-content-center">
+      <div class="contact-info-card text-center" style="max-width: 320px; width:100%;">
+        <div class="contact-icon">
+          <i class="bi bi-telephone-fill"></i>
+        </div>
+        <h5>Telefone</h5>
+        <p><a href="tel:+5561995088888">(61) 99508-8888</a></p>
+        <p class="small text-muted">Horário comercial</p>
+      </div>
+    </div>
+    -->
+  </div>
+
+
+
+  <!-- Mapa ou Informações Adicionais -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <div class="info-section">
+        <h4 class="text-center mb-4">Sobre o GPTCode</h4>
+        <div class="row">
+          <div class="col-md-4 text-center mb-4">
+            <div class="info-item">
+              <i
+                class="bi bi-lightbulb text-accent contact-icon-large"
+              ></i>
+              <h6 class="mt-2">Pesquisa & Inovação</h6>
+              <p class="small text-muted">
+                Desenvolvemos soluções tecnológicas inovadoras
+              </p>
+            </div>
+          </div>
+          <div class="col-md-4 text-center mb-4">
+            <div class="info-item">
+              <i class="bi bi-people text-accent contact-icon-large"></i>
+              <h6 class="mt-2">Colaboração</h6>
+              <p class="small text-muted">
+                Trabalhamos em parceria com empresas e instituições
+              </p>
+            </div>
+          </div>
+          <div class="col-md-4 text-center mb-4">
+            <div class="info-item">
+              <i
+                class="bi bi-mortarboard text-accent contact-icon-large"
+              ></i>
+              <h6 class="mt-2">Formação</h6>
+              <p class="small text-muted">
+                Capacitamos estudantes em tecnologias de ponta
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

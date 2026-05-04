@@ -1,0 +1,145 @@
+{% extends 'base.html' %} {% block title %}Equipe | GPTCode{% endblock %} {%
+block extra_head %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/equipe.css') }}"
+/>
+{% endblock %} {% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">{{ team.page.title }}</h1>
+    <p class="lead text-white-50">{{ team.page.subtitle }}</p>
+    <div class="team-header-stats">
+      <div class="team-stat-pill">
+        <strong>{{ team.members|length }}</strong>
+        <span>Membros</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container">
+    <section class="team-toolbar">
+      
+      </div>
+    </section>
+
+    <div class="team-cascade">
+      {% for section in team_sections %} {% set member_count =
+      section.members|length %}
+      <section
+        class="team-category"
+        id="{{ section.id }}"
+        data-team-section="{{ section.id }}"
+      >
+        <div class="team-category-head">
+          <div>
+           
+            <h2 class="category-title">{{ section.title }}</h2>
+          </div>
+          <span class="category-count">
+            {{ member_count }} {{ 'membro' if member_count == 1 else 'membros'
+            }}
+          </span>
+        </div>
+        <div class="row g-4">
+          {% if section.members %} {% for member in section.members %}
+          <div
+            class="col-xl-3 col-lg-4 col-md-6 team-member"
+            data-category="{{ section.id }}"
+          >
+            <article class="member-card">
+              <div class="member-img-container">
+                <img
+                  src="{{ url_for('static', filename=member.image if member.image else 'imagens/logos/gptcode-icon.png') }}"
+                  class="member-img"
+                  alt="{{ member.name }}"
+                  loading="lazy"
+                />
+                {% if member.github_url or member.lattes_url %}
+                <div class="member-overlay">
+                  <div class="member-social">
+                    {% if member.github_url %}
+                    <a
+                      href="{{ member.github_url }}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="GitHub de {{ member.name }}"
+                    >
+                      <i class="bi bi-github"></i>
+                    </a>
+                    {% endif %} {% if member.lattes_url %}
+                    <a
+                      href="{{ member.lattes_url }}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Lattes de {{ member.name }}"
+                    >
+                      <span class="lattes-icon">L</span>
+                    </a>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+              <div class="member-info">
+                <h5 class="member-name">{{ member.name }}</h5>
+                {% if member.role %}
+                <p class="member-role">{{ member.role }}</p>
+                {% endif %} {% if member.description %}
+                <p class="member-desc">{{ member.description }}</p>
+                {% endif %} {% if member.tags %}
+                <div class="member-tags">
+                  {% for tag in member.tags %}
+                  <span class="member-tag">{{ tag }}</span>
+                  {% endfor %}
+                </div>
+                {% endif %} {% if member.github_url or member.lattes_url %}
+                <div class="member-actions">
+                  {% if member.github_url %}
+                  <a
+                    href="{{ member.github_url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="member-action-link"
+                  >
+                    <i class="bi bi-github"></i>
+                    <span>GitHub</span>
+                  </a>
+                  {% endif %} {% if member.lattes_url %}
+                  <a
+                    href="{{ member.lattes_url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="member-action-link"
+                  >
+                    <span class="lattes-icon">L</span>
+                    <span>Lattes</span>
+                  </a>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </article>
+          </div>
+          {% endfor %} {% else %}
+          <div class="col-12">
+            <div class="team-empty-state text-center mt-2">
+              <h3 class="no-members-title">{{ section.empty_message }}</h3>
+              <p class="mb-0">
+                Novos integrantes podem ser cadastrados pelo painel
+                administrativo.
+              </p>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+      {% endfor %}
+    </div>
+  </div>
+</main>
+{% endblock %} {% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/equipe.js') }}"></script>
+{% endblock %}

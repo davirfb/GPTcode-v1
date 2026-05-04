@@ -1,0 +1,73 @@
+/* Transições suaves de hover em elementos interativos */
+.glass-card,
+.member-card,
+.publication-item,
+.research-item,
+.card-lift,
+.project-card,
+.publication-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn-filter {
+  transition: all 0.3s ease;
+}
+
+.social-link,
+.member-social a {
+  transition: all 0.3s ease;
+}
+
+.navbar-nav .nav-link {
+  transition: color 0.2s ease;
+}
+
+/* Hover na imagem do membro */
+.member-card:hover .member-img {
+  transform: scale(1.1);
+}
+
+.member-card:hover .member-overlay {
+  opacity: 1;
+}
+
+/* Animação de entrada ao aparecer na tela (uso pontual via JS) */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Loading spinner (painel admin) */
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading {
+  animation: spin 1s linear infinite;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--medium-blue);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  margin: 0 auto;
+}
+
+/* Acessibilidade: respeitar preferência do usuário */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

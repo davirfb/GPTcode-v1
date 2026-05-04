@@ -1,0 +1,222 @@
+{% extends 'admin/base.html' %}
+{% block title %}Equipe | GPTCode Admin{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Edicao da Equipe</h1>
+    <p class="lead text-white-50">
+      Gerencie membros, categorias, GitHub, Lattes, imagens e tags.
+    </p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-end mb-4">
+      <a href="#adicionar-membro" class="btn btn-warning">Adicionar novo membro</a>
+    </div>
+
+    <div class="row g-4 mb-5">
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Membros cadastrados</span>
+          <strong class="admin-stat-value">{{ team["members"]|length }}</strong>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Categorias</span>
+          <strong class="admin-stat-value">{{ team.categories|length }}</strong>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Perfis com GitHub</span>
+          <strong class="admin-stat-value">{{ team["members"] | selectattr('github_url') | list | length }}</strong>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Perfis com Lattes</span>
+          <strong class="admin-stat-value">{{ team["members"] | selectattr('lattes_url') | list | length }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-panel-card mb-5">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Categorias da equipe</h2>
+      </div>
+      <div class="row g-4">
+        {% for category in team.categories %}
+        <div class="col-lg-6">
+          <div class="admin-item-card">
+            <form method="post" action="{{ url_for('admin_update_team_category', category_id=category.id) }}" class="admin-form">
+              <label class="form-label">Titulo da categoria</label>
+              <input class="form-control mb-3" name="title" value="{{ category.title }}" />
+              <label class="form-label">Mensagem de categoria vazia</label>
+              <input class="form-control mb-4" name="empty_message" value="{{ category.empty_message }}" />
+              <button type="submit" class="btn btn-warning">Salvar categoria</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_delete_team_category', category_id=category.id) }}" class="mt-2">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover categoria</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="admin-panel-card mb-5" id="membros">
+      <div class="admin-panel-head admin-flex-head">
+        <div>
+          <h2 class="admin-panel-title">Gerenciar membros</h2>
+          <p class="admin-panel-subtitle">
+            Edite, remova ou reorganize os integrantes por categoria.
+          </p>
+        </div>
+        <a href="#adicionar-membro" class="btn btn-warning">Adicionar novo membro</a>
+      </div>
+
+      <div class="admin-chip-list">
+        {% for section in team_sections %}
+        <a href="#section-{{ section.id }}" class="admin-chip-link">
+          <span>{{ section.title }}</span>
+          <strong>{{ section.members|length }}</strong>
+        </a>
+        {% endfor %}
+      </div>
+
+      {% for section in team_sections %}
+      {% set member_count = section.members|length %}
+      <section class="admin-section-block" id="section-{{ section.id }}">
+        <div class="admin-section-head">
+          <div>
+            <p class="admin-section-kicker">Categoria</p>
+            <h3 class="admin-card-title mb-0">{{ section.title }}</h3>
+          </div>
+          <span class="admin-section-count">
+            {{ member_count }} {{ 'membro' if member_count == 1 else 'membros' }}
+          </span>
+        </div>
+
+        {% if section.members %}
+        <div class="row g-4">
+          {% for member in section.members %}
+          <div class="col-xl-6">
+            <div class="admin-item-card h-100">
+              <img
+                class="admin-preview-image"
+                src="{{ url_for('static', filename=member.image if member.image else 'imagens/logos/gptcode-icon.png') }}"
+                alt="{{ member.name }}"
+              />
+              <form method="post" action="{{ url_for('admin_update_team_member', item_id=member.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
+                <div class="admin-form-grid">
+                  <div>
+                    <label class="form-label">Categoria</label>
+                    <select class="form-select" name="category">
+                      {% for category in team.categories %}
+                      <option value="{{ category.id }}" {% if category.id == member.category %}selected{% endif %}>
+                        {{ category.title }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label">Role</label>
+                    <input class="form-control" name="role" value="{{ member.role }}" />
+                  </div>
+                  <div class="admin-grid-span-2">
+                    <label class="form-label">Nome</label>
+                    <input class="form-control" name="name" value="{{ member.name }}" />
+                  </div>
+                  <div>
+                    <label class="form-label">GitHub</label>
+                    <input class="form-control" name="github_url" value="{{ member.github_url }}" />
+                  </div>
+                  <div>
+                    <label class="form-label">Lattes</label>
+                    <input class="form-control" name="lattes_url" value="{{ member.lattes_url }}" />
+                  </div>
+                  <div class="admin-grid-span-2">
+                    <label class="form-label">Descricao</label>
+                    <textarea class="form-control" name="description" rows="4">{{ member.description }}</textarea>
+                  </div>
+                  <div class="admin-grid-span-2">
+                    <label class="form-label">Tags (separadas por virgula)</label>
+                    <input class="form-control" name="tags" value="{{ member.tags|join(', ') }}" />
+                  </div>
+                  <div class="admin-grid-span-2">
+                    <label class="form-label">Nova imagem</label>
+                    <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+                  </div>
+                </div>
+                <div class="admin-form-actions">
+                  <button type="submit" class="btn btn-warning">Salvar membro</button>
+                </div>
+              </form>
+              <form method="post" action="{{ url_for('admin_delete_team_member', item_id=member.id) }}" class="mt-3">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Remover membro</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="admin-item-card admin-item-card-dashed">
+          <p class="admin-help-text mb-0">{{ section.empty_message }}</p>
+        </div>
+        {% endif %}
+      </section>
+      {% endfor %}
+    </div>
+
+    <div class="admin-panel-card" id="adicionar-membro">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Adicionar novo membro</h2>
+      </div>
+      <form method="post" action="{{ url_for('admin_add_team_member') }}" enctype="multipart/form-data" class="admin-form">
+        <div class="admin-form-grid">
+          <div>
+            <label class="form-label">Categoria</label>
+            <select class="form-select" name="category">
+              {% for category in team.categories %}
+              <option value="{{ category.id }}">{{ category.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Role</label>
+            <input class="form-control" name="role" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Nome</label>
+            <input class="form-control" name="name" />
+          </div>
+          <div>
+            <label class="form-label">GitHub</label>
+            <input class="form-control" name="github_url" />
+          </div>
+          <div>
+            <label class="form-label">Lattes</label>
+            <input class="form-control" name="lattes_url" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Descricao</label>
+            <textarea class="form-control" name="description" rows="4"></textarea>
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Tags (separadas por virgula)</label>
+            <input class="form-control" name="tags" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Imagem</label>
+            <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" required />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-warning mt-4">Adicionar membro</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

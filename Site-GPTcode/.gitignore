@@ -1,0 +1,14 @@
+# Pasta do Ambiente Virtual
+venv/
+.venv/
+
+# Arquivo de variáveis de ambiente (contém senhas!)
+.env
+serviceAccountKey*.json
+firebase-service-account*.json
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

@@ -1,0 +1,106 @@
+{% extends 'admin/base.html' %}
+{% block title %}Dashboard | GPTCode Admin{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Dashboard Administrativo</h1>
+    <p class="lead text-white-50">
+      Gerencie o conteudo principal do site mantendo o visual atual.
+    </p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row g-4 mb-5">
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Slider do sobre</span>
+          <strong class="admin-stat-value">{{ stats.slider_images }}</strong>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Parceiros</span>
+          <strong class="admin-stat-value">{{ stats.partners }}</strong>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Projetos</span>
+          <strong class="admin-stat-value">{{ stats.projects }}</strong>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Membros da equipe</span>
+          <strong class="admin-stat-value">{{ stats.team_members }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Pagina Inicial</h2>
+            <p class="admin-panel-subtitle">
+              Edite o hero, slider do sobre, destaque principal e parceiros.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Hero atual: {{ home.hero.title }}</span>
+            <span>Parceiros cadastrados: {{ home.partners|length }}</span>
+          </div>
+          <a href="{{ url_for('admin_home') }}" class="btn btn-warning mt-4">Editar inicio</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Projetos</h2>
+            <p class="admin-panel-subtitle">
+              Atualize cards, imagens e o botao "Sobre" de cada projeto.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Total de projetos: {{ projects["items"]|length }}</span>
+            <span>Cabecalho: {{ projects.page.title }}</span>
+          </div>
+          <a href="{{ url_for('admin_projects') }}" class="btn btn-warning mt-4">Editar projetos</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Publicacoes</h2>
+            <p class="admin-panel-subtitle">
+              Gerencie titulos, participantes, revista e links de DOI.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Total de publicacoes: {{ publications["items"]|length }}</span>
+            <span>Secao: {{ publications.page.section_title }}</span>
+          </div>
+          <a href="{{ url_for('admin_publications') }}" class="btn btn-warning mt-4">Editar publicacoes</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Equipe</h2>
+            <p class="admin-panel-subtitle">
+              Edite membros, tags, links de GitHub e Lattes, alem das imagens.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Categorias: {{ team.categories|length }}</span>
+            <span>Membros: {{ team["members"]|length }}</span>
+          </div>
+          <a href="{{ url_for('admin_team') }}" class="btn btn-warning mt-4">Editar equipe</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

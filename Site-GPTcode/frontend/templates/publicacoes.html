@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Publicacoes | GPTCode{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">{{ publications.page.title }}</h1>
+    <p class="lead text-white-50">
+      {{ publications.page.subtitle }}
+    </p>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container">
+    <h2 class="section-title">{{ publications.page.section_title }}</h2>
+    <div class="publications-grid">
+      {% for publication in publications["items"] %}
+      <div class="publication-card" data-year="{{ publication.year }}">
+        <div class="card-header">
+          <span class="badge bg-accent">{{ publication.year }}</span>
+        </div>
+        <h5 class="card-title">{{ publication.title }}</h5>
+        <p class="card-text text-muted small">
+          {{ publication.participants }}
+        </p>
+        <p class="card-journal small">
+          <strong>Revista:</strong> {{ publication.journal }}
+        </p>
+        {% if publication.doi_url %}
+        <div class="card-actions">
+          <a
+            href="{{ publication.doi_url }}"
+            class="btn btn-sm btn-doi"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            DOI
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</main>
+{% endblock %}

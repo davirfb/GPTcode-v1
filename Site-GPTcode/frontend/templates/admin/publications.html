@@ -1,0 +1,88 @@
+{% extends 'admin/base.html' %}
+{% block title %}Publicacoes | GPTCode Admin{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Edicao de Publicacoes</h1>
+    <p class="lead text-white-50">
+      Atualize titulos, participantes, revista e DOI das publicacoes.
+    </p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-end mb-4">
+      <a href="#adicionar-publicacao" class="btn btn-warning">Adicionar nova publicacao</a>
+    </div>
+
+    <div class="row g-4 mb-4">
+      {% for publication in publications["items"] %}
+      <div class="col-xl-6">
+        <div class="admin-item-card h-100">
+          <form method="post" action="{{ url_for('admin_update_publication', item_id=publication.id) }}" class="admin-form">
+            <div class="admin-form-grid">
+              <div>
+                <label class="form-label">Ano</label>
+                <input class="form-control" name="year" value="{{ publication.year }}" />
+              </div>
+              <div>
+                <label class="form-label">Link DOI</label>
+                <input class="form-control" name="doi_url" value="{{ publication.doi_url }}" />
+              </div>
+              <div class="admin-grid-span-2">
+                <label class="form-label">Titulo</label>
+                <input class="form-control" name="title" value="{{ publication.title }}" />
+              </div>
+              <div class="admin-grid-span-2">
+                <label class="form-label">Participantes</label>
+                <textarea class="form-control" name="participants" rows="3">{{ publication.participants }}</textarea>
+              </div>
+              <div class="admin-grid-span-2">
+                <label class="form-label">Revista publicada</label>
+                <textarea class="form-control" name="journal" rows="3">{{ publication.journal }}</textarea>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-warning mt-4">Salvar publicacao</button>
+          </form>
+          <form method="post" action="{{ url_for('admin_delete_publication', item_id=publication.id) }}" class="mt-2">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Remover publicacao</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="admin-panel-card" id="adicionar-publicacao">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Adicionar nova publicacao</h2>
+      </div>
+      <form method="post" action="{{ url_for('admin_add_publication') }}" class="admin-form">
+        <div class="admin-form-grid">
+          <div>
+            <label class="form-label">Ano</label>
+            <input class="form-control" name="year" />
+          </div>
+          <div>
+            <label class="form-label">Link DOI</label>
+            <input class="form-control" name="doi_url" placeholder="https://..." />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Titulo</label>
+            <input class="form-control" name="title" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Participantes</label>
+            <textarea class="form-control" name="participants" rows="3"></textarea>
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Revista publicada</label>
+            <textarea class="form-control" name="journal" rows="3"></textarea>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-warning mt-4">Adicionar publicacao</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

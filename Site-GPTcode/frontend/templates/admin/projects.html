@@ -1,0 +1,99 @@
+{% extends 'admin/base.html' %}
+{% block title %}Projetos | GPTCode Admin{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Edicao de Projetos</h1>
+    <p class="lead text-white-50">
+      Mantenha a grade atual e atualize textos, imagens e links "Sobre".
+    </p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-end mb-4">
+      <a href="#adicionar-projeto" class="btn btn-warning">Adicionar novo projeto</a>
+    </div>
+
+    <div class="row g-4 mb-4">
+      {% for project in projects["items"] %}
+      <div class="col-xl-6">
+        <div class="admin-item-card h-100">
+          {% if project.image %}
+          <img class="admin-preview-image" src="{{ url_for('static', filename=project.image) }}" alt="{{ project.title }}" />
+          {% endif %}
+          <form method="post" action="{{ url_for('admin_update_project', item_id=project.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
+            <div class="admin-form-grid">
+              <div>
+                <label class="form-label">Badge</label>
+                <input class="form-control" name="badge" value="{{ project.badge }}" />
+              </div>
+              <div>
+                <label class="form-label">Link do botao Sobre</label>
+                <input class="form-control" name="about_url" value="{{ project.about_url }}" />
+              </div>
+              <div class="admin-grid-span-2">
+                <label class="form-label">Titulo do projeto</label>
+                <input class="form-control" name="title" value="{{ project.title }}" />
+              </div>
+              <div>
+                <label class="form-label">Estudantes</label>
+                <input class="form-control" name="students" value="{{ project.students }}" />
+              </div>
+              <div>
+                <label class="form-label">Orientador</label>
+                <input class="form-control" name="advisor" value="{{ project.advisor }}" />
+              </div>
+              <div class="admin-grid-span-2">
+                <label class="form-label">Nova imagem</label>
+                <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-warning mt-4">Salvar projeto</button>
+          </form>
+          <form method="post" action="{{ url_for('admin_delete_project', item_id=project.id) }}" class="mt-2">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Remover projeto</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="admin-panel-card" id="adicionar-projeto">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Adicionar novo projeto</h2>
+      </div>
+      <form method="post" action="{{ url_for('admin_add_project') }}" enctype="multipart/form-data" class="admin-form">
+        <div class="admin-form-grid">
+          <div>
+            <label class="form-label">Badge</label>
+            <input class="form-control" name="badge" placeholder="Ex.: PTCC/TCC" />
+          </div>
+          <div>
+            <label class="form-label">Link do botao Sobre</label>
+            <input class="form-control" name="about_url" placeholder="https://..." />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Titulo do projeto</label>
+            <input class="form-control" name="title" />
+          </div>
+          <div>
+            <label class="form-label">Estudantes</label>
+            <input class="form-control" name="students" />
+          </div>
+          <div>
+            <label class="form-label">Orientador</label>
+            <input class="form-control" name="advisor" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Imagem</label>
+            <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-warning mt-4">Adicionar projeto</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

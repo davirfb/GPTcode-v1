@@ -1,0 +1,198 @@
+{% extends 'admin/base.html' %}
+{% block title %}Inicio | GPTCode Admin{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Edicao da Pagina Inicial</h1>
+    <p class="lead text-white-50">
+      Controle o hero, o slider do sobre, os destaques e os parceiros.
+    </p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="admin-panel-card mb-5">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Textos gerais</h2>
+        <p class="admin-panel-subtitle">
+          Atualize o hero, o texto do sobre e os botoes da secao inicial.
+        </p>
+      </div>
+      <form method="post" action="{{ url_for('admin_update_home_settings') }}" class="admin-form">
+        <input type="hidden" name="hero_title" value="{{ home.hero.title }}" />
+        <input type="hidden" name="hero_subtitle" value="{{ home.hero.subtitle }}" />
+        <input type="hidden" name="about_title" value="{{ home.about.title }}" />
+        <input type="hidden" name="partners_title" value="{{ home.partners_title }}" />
+        <input type="hidden" name="primary_button_text" value="{{ home.about.primary_button_text }}" />
+        <input type="hidden" name="primary_button_link" value="{{ home.about.primary_button_link }}" />
+        <input type="hidden" name="secondary_button_text" value="{{ home.about.secondary_button_text }}" />
+        <input type="hidden" name="secondary_button_link" value="{{ home.about.secondary_button_link }}" />
+        <div class="admin-form-grid">
+          <div class="admin-grid-span-2">
+            <label class="form-label">Lead do sobre</label>
+            <textarea class="form-control" name="about_lead" rows="3">{{ home.about.lead }}</textarea>
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Descricao do sobre</label>
+            <textarea class="form-control" name="about_description" rows="3">{{ home.about.description }}</textarea>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-warning mt-4">Salvar textos</button>
+      </form>
+    </div>
+
+    <div class="admin-panel-card mb-5">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Slider da secao Sobre</h2>
+        <p class="admin-panel-subtitle">
+          Adicione, troque ou remova imagens do carrossel.
+        </p>
+      </div>
+      <div class="row g-4">
+        {% for slide in home.about.slider %}
+        <div class="col-lg-6">
+          <div class="admin-item-card">
+            <img class="admin-preview-image" src="{{ url_for('static', filename=slide.image) }}" alt="{{ slide.alt }}" />
+            <form method="post" action="{{ url_for('admin_update_slider_image', item_id=slide.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
+              <label class="form-label">Texto alternativo</label>
+              <input class="form-control mb-3" name="alt" value="{{ slide.alt }}" />
+              <label class="form-label">Trocar imagem</label>
+              <input class="form-control mb-4" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+              <button type="submit" class="btn btn-warning">Salvar</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_delete_slider_image', item_id=slide.id) }}" class="mt-2">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover imagem</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+        <div class="col-lg-6">
+          <div class="admin-item-card admin-item-card-dashed">
+            <h3 class="admin-card-title">Adicionar nova imagem</h3>
+            <form method="post" action="{{ url_for('admin_add_slider_image') }}" enctype="multipart/form-data" class="admin-form">
+              <label class="form-label">Texto alternativo</label>
+              <input class="form-control mb-3" name="alt" placeholder="Descricao da imagem" />
+              <label class="form-label">Imagem</label>
+              <input class="form-control mb-4" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" required />
+              <button type="submit" class="btn btn-warning">Adicionar ao slider</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-panel-card mb-5">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Destaque principal</h2>
+        <p class="admin-panel-subtitle">
+          Edite a imagem, o titulo, os autores, a descricao e os botoes.
+        </p>
+      </div>
+      <div class="row g-4 align-items-start">
+        <div class="col-lg-4">
+          <img class="admin-preview-image" src="{{ url_for('static', filename=home.highlight.image) }}" alt="{{ home.highlight.image_alt }}" />
+        </div>
+        <div class="col-lg-8">
+          <form method="post" action="{{ url_for('admin_update_highlight') }}" enctype="multipart/form-data" class="admin-form">
+            <div class="admin-form-grid">
+              <div class="admin-grid-span-2">
+                <label class="form-label">Titulo</label>
+                <input class="form-control" name="title" value="{{ home.highlight.title }}" />
+              </div>
+              <div class="admin-grid-span-2">
+                <label class="form-label">Autores</label>
+                <input class="form-control" name="authors" value="{{ home.highlight.authors }}" />
+              </div>
+              <div class="admin-grid-span-2">
+                <label class="form-label">Descricao</label>
+                <textarea class="form-control" name="description" rows="4">{{ home.highlight.description }}</textarea>
+              </div>
+              <div class="admin-grid-span-2">
+                <label class="form-label">Revista publicada</label>
+                <input class="form-control" name="journal" value="{{ home.highlight.journal }}" />
+              </div>
+              <div>
+                <label class="form-label">Texto botao 1</label>
+                <input class="form-control" name="primary_button_text" value="{{ home.highlight.primary_button_text }}" />
+              </div>
+              <div>
+                <label class="form-label">Link botao 1</label>
+                <input class="form-control" name="primary_button_link" value="{{ home.highlight.primary_button_link }}" />
+              </div>
+              <div>
+                <label class="form-label">Texto botao 2</label>
+                <input class="form-control" name="secondary_button_text" value="{{ home.highlight.secondary_button_text }}" />
+              </div>
+              <div>
+                <label class="form-label">Link botao 2</label>
+                <input class="form-control" name="secondary_button_link" value="{{ home.highlight.secondary_button_link }}" />
+              </div>
+              <div>
+                <label class="form-label">Texto alternativo da imagem</label>
+                <input class="form-control" name="image_alt" value="{{ home.highlight.image_alt }}" />
+              </div>
+              <div>
+                <label class="form-label">Nova imagem</label>
+                <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-warning mt-4">Salvar destaque</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-panel-card">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Parceiros e apoiadores</h2>
+        <p class="admin-panel-subtitle">
+          Cadastre logos com link ou remova os que nao devem mais aparecer.
+        </p>
+      </div>
+      <div class="row g-4 mb-4">
+        {% for partner in home.partners %}
+        <div class="col-lg-6">
+          <div class="admin-item-card">
+            <img class="admin-preview-image admin-preview-logo" src="{{ url_for('static', filename=partner.image) }}" alt="{{ partner.name }}" />
+            <form method="post" action="{{ url_for('admin_update_partner', item_id=partner.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
+              <label class="form-label">Nome</label>
+              <input class="form-control mb-3" name="name" value="{{ partner.name }}" />
+              <label class="form-label">Link</label>
+              <input class="form-control mb-3" name="link" value="{{ partner.link }}" />
+              <label class="form-label">Trocar logo</label>
+              <input class="form-control mb-4" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+              <button type="submit" class="btn btn-warning">Salvar</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_delete_partner', item_id=partner.id) }}" class="mt-2">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover parceiro</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="admin-item-card admin-item-card-dashed">
+        <h3 class="admin-card-title">Adicionar parceiro ou apoiador</h3>
+        <form method="post" action="{{ url_for('admin_add_partner') }}" enctype="multipart/form-data" class="admin-form">
+          <div class="admin-form-grid">
+            <div>
+              <label class="form-label">Nome</label>
+              <input class="form-control" name="name" />
+            </div>
+            <div>
+              <label class="form-label">Link</label>
+              <input class="form-control" name="link" />
+            </div>
+            <div class="admin-grid-span-2">
+              <label class="form-label">Logo</label>
+              <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" required />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-warning mt-4">Adicionar parceiro</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'admin/base.html' %} {% block title %}Login Administrativo |
+GPTCode{% endblock %} {% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Painel Administrativo</h1>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-5 col-md-8">
+        <div class="admin-panel-card admin-login-card">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Acesso administrativo</h2>
+          </div>
+          {% if firebase_ready %}
+          <form id="firebase-login-form" novalidate>
+            <div class="mb-3">
+              <label for="login-email" class="form-label">Email</label>
+              <input
+                type="email"
+                class="form-control"
+                id="login-email"
+                autocomplete="email"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="login-password" class="form-label">Senha</label>
+              <input
+                type="password"
+                class="form-control"
+                id="login-password"
+                autocomplete="current-password"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              id="firebase-login-button"
+              class="btn btn-warning w-100"
+            >
+              <span data-login-label>Entrar</span>
+            </button>
+          </form>
+          <div
+            id="firebase-login-feedback"
+            class="alert alert-danger d-none mt-3 mb-0"
+            role="alert"
+          ></div>
+
+          {% else %}
+          <div class="alert alert-warning mb-0" role="alert">
+            {{ firebase_setup_issues | join(' ') }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

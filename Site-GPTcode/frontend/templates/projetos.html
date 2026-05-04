@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Projetos | GPTCode{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section fade-in">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold fade-in-up stagger-1">
+      {{ projects.page.title }}
+    </h1>
+    <p class="lead text-white-50 fade-in-up stagger-2">
+      {{ projects.page.subtitle }}
+    </p>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container">
+    <section class="mb-5">
+      <h2 class="section-title fade-in-down stagger-1">
+        {{ projects.page.section_title }}
+      </h2>
+      <div class="projects-grid">
+        {% for project in projects["items"] %}
+        <div class="project-card fade-in-up">
+          <div class="card-header">
+            <span class="badge bg-accent">{{ project.badge }}</span>
+          </div>
+          {% if project.image %}
+          <div class="project-media">
+            <img
+              src="{{ url_for('static', filename=project.image) }}"
+              alt="{{ project.title }}"
+              class="project-card-image"
+            />
+          </div>
+          {% endif %}
+          <h5 class="card-title">{{ project.title }}</h5>
+          <p class="card-text text-muted small">
+            <strong>Estudantes:</strong> {{ project.students }}
+          </p>
+          <p class="card-text text-muted small">
+            <strong>Orientador:</strong> {{ project.advisor }}
+          </p>
+          {% if project.about_url %}
+          <div class="project-card-actions">
+            <a href="{{ project.about_url }}" class="btn btn-sm btn-warning" target="_blank" rel="noopener noreferrer">
+              Sobre
+            </a>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}

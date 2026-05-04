@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Inicio | GPTCode{% endblock %}
+{% block content %}
+<header id="inicio" class="hero d-flex align-items-center">
+  <div class="container text-center">
+    <img
+      src="{{ url_for('static', filename='imagens/logos/Logo-GPTCode-png.png') }}"
+      alt="GPTCode Logo"
+      class="mb-4 stagger-5"
+      style="max-width: 500px"
+    />
+    <h1 class="display-3 text-white fw-bold mb-4 fade-in-up stagger-1">
+      {{ home.hero.title }}
+    </h1>
+    <p class="lead text-white-50 my-4 fade-in-up stagger-2">
+      {{ home.hero.subtitle }}
+    </p>
+  </div>
+</header>
+
+<section id="sobre" class="py-5 section-padding fade-in-up stagger-3">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6">
+        <h2 class="section-title text-center mb-5 fade-in-down stagger-1">
+          {{ home.about.title }}
+        </h2>
+        <p class="lead fade-in-up stagger-2">
+          {{ home.about.lead }}
+        </p>
+        <p class="fade-in-up stagger-3">
+          {{ home.about.description }}
+        </p>
+        <div class="quem-somos-buttons d-flex flex-wrap gap-3 mt-4 fade-in-up stagger-4">
+          {% if home.about.primary_button_text and home.about.primary_button_link %}
+          <a href="{{ home.about.primary_button_link }}" class="btn btn-outline-warning">
+            {{ home.about.primary_button_text }}
+          </a>
+          {% endif %}
+          {% if home.about.secondary_button_text and home.about.secondary_button_link %}
+          <a href="{{ home.about.secondary_button_link }}" class="btn btn-warning">
+            {{ home.about.secondary_button_text }}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-6 text-center fade-in-right stagger-5">
+        {% if home.about.slider %}
+        <div
+          id="aboutSlider"
+          class="carousel slide about-carousel shadow-lg rounded-4 overflow-hidden"
+          data-bs-ride="carousel"
+        >
+          <div class="carousel-inner">
+            {% for slide in home.about.slider %}
+            <div class="carousel-item {% if loop.first %}active{% endif %}">
+              <img
+                src="{{ url_for('static', filename=slide.image) }}"
+                class="d-block w-100 about-slider-image"
+                alt="{{ slide.alt }}"
+              />
+            </div>
+            {% endfor %}
+          </div>
+          {% if home.about.slider|length > 1 %}
+          <button class="carousel-control-prev" type="button" data-bs-target="#aboutSlider" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Anterior</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#aboutSlider" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Proxima</span>
+          </button>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5 bg-light section-padding fade-in-up stagger-4">
+  <h2 class="section-title text-center mb-5 fade-in-down stagger-1">
+    Destaques
+  </h2>
+  <div class="container">
+    <div class="row align-items-center g-0 shadow rounded-4 bg-white p-4 highlight-section fade-in-up stagger-2">
+      <div class="col-md-5 d-flex justify-content-center align-items-center">
+        <div class="highlight-image">
+          <img
+            src="{{ url_for('static', filename=home.highlight.image) }}"
+            alt="{{ home.highlight.image_alt }}"
+            class="img-fluid"
+          />
+        </div>
+      </div>
+      <div class="col-md-7">
+        <h3 class="fw-bold mb-2">{{ home.highlight.title }}</h3>
+        <p class="mb-1">
+          <strong>Autores:</strong> {{ home.highlight.authors }}
+        </p>
+        <p>{{ home.highlight.description }}</p>
+        {% if home.highlight.journal %}
+        <p class="mb-2 text-muted highlight-paragraph-secondary">
+          {{ home.highlight.journal }}
+        </p>
+        {% endif %}
+        <div class="d-flex flex-wrap gap-2">
+          {% if home.highlight.primary_button_text and home.highlight.primary_button_link %}
+          <a
+            href="{{ home.highlight.primary_button_link }}"
+            class="btn btn-warning fw-semibold px-4 py-2"
+          >
+            {{ home.highlight.primary_button_text }}
+          </a>
+          {% endif %}
+          {% if home.highlight.secondary_button_text and home.highlight.secondary_button_link %}
+          <a
+            href="{{ home.highlight.secondary_button_link }}"
+            class="btn btn-warning fw-semibold px-4 py-2"
+          >
+            {{ home.highlight.secondary_button_text }}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5 section-padding fade-in-up stagger-5">
+  <div class="container">
+    <h2 class="section-title text-center mb-5 fade-in-down stagger-1">
+      {{ home.partners_title }}
+    </h2>
+    <div class="row justify-content-center fade-in-up stagger-2">
+      {% for partner in home.partners %}
+      <div class="col-md-4 text-center mb-4">
+        <a href="{{ partner.link }}" target="_blank" rel="noopener noreferrer">
+          <img
+            src="{{ url_for('static', filename=partner.image) }}"
+            class="img-fluid partner-logo"
+            alt="{{ partner.name }}"
+          />
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
