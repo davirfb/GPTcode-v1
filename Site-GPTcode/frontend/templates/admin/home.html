@@ -97,18 +97,18 @@
           <label class="form-label">Item em destaque</label>
           <select class="form-select" name="highlight_selection">
             <option value="none" {% if current_selection == 'none' %}selected{% endif %}>-- Nenhum (sem destaque) --</option>
-            {% if publications.items %}
+            {% if publications['items'] %}
             <optgroup label="Publicacoes">
-              {% for pub in publications.items %}
+              {% for pub in publications['items'] %}
               <option value="publication:{{ pub.id }}" {% if current_selection == 'publication:' + pub.id %}selected{% endif %}>
                 [{{ pub.year }}] {{ pub.title | truncate(80) }}
               </option>
               {% endfor %}
             </optgroup>
             {% endif %}
-            {% if projects.items %}
+            {% if projects['items'] %}
             <optgroup label="Projetos">
-              {% for proj in projects.items %}
+              {% for proj in projects['items'] %}
               <option value="project:{{ proj.id }}" {% if current_selection == 'project:' + proj.id %}selected{% endif %}>
                 [{{ proj.badge }}] {{ proj.title | truncate(80) }}
               </option>
