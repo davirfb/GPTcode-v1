@@ -86,61 +86,39 @@
       <div class="admin-panel-head">
         <h2 class="admin-panel-title">Destaque principal</h2>
         <p class="admin-panel-subtitle">
-          Edite a imagem, o titulo, os autores, a descricao e os botoes.
+          Escolha um projeto ou publicacao para exibir em destaque na pagina inicial.
         </p>
       </div>
-      <div class="row g-4 align-items-start">
-        <div class="col-lg-4">
-          <img class="admin-preview-image" src="{{ url_for('static', filename=home.highlight.image) }}" alt="{{ home.highlight.image_alt }}" />
+      <form method="post" action="{{ url_for('admin_update_highlight') }}" class="admin-form">
+        {% set current_type = home.highlight.type if home.highlight.type else 'none' %}
+        {% set current_id = home.highlight.item_id if home.highlight.item_id else '' %}
+        {% set current_selection = (current_type + ':' + current_id) if current_type != 'none' else 'none' %}
+        <div class="mb-4">
+          <label class="form-label">Item em destaque</label>
+          <select class="form-select" name="highlight_selection">
+            <option value="none" {% if current_selection == 'none' %}selected{% endif %}>-- Nenhum (sem destaque) --</option>
+            {% if publications.items %}
+            <optgroup label="Publicacoes">
+              {% for pub in publications.items %}
+              <option value="publication:{{ pub.id }}" {% if current_selection == 'publication:' + pub.id %}selected{% endif %}>
+                [{{ pub.year }}] {{ pub.title | truncate(80) }}
+              </option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
+            {% if projects.items %}
+            <optgroup label="Projetos">
+              {% for proj in projects.items %}
+              <option value="project:{{ proj.id }}" {% if current_selection == 'project:' + proj.id %}selected{% endif %}>
+                [{{ proj.badge }}] {{ proj.title | truncate(80) }}
+              </option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
+          </select>
         </div>
-        <div class="col-lg-8">
-          <form method="post" action="{{ url_for('admin_update_highlight') }}" enctype="multipart/form-data" class="admin-form">
-            <div class="admin-form-grid">
-              <div class="admin-grid-span-2">
-                <label class="form-label">Titulo</label>
-                <input class="form-control" name="title" value="{{ home.highlight.title }}" />
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Autores</label>
-                <input class="form-control" name="authors" value="{{ home.highlight.authors }}" />
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Descricao</label>
-                <textarea class="form-control" name="description" rows="4">{{ home.highlight.description }}</textarea>
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Revista publicada</label>
-                <input class="form-control" name="journal" value="{{ home.highlight.journal }}" />
-              </div>
-              <div>
-                <label class="form-label">Texto botao 1</label>
-                <input class="form-control" name="primary_button_text" value="{{ home.highlight.primary_button_text }}" />
-              </div>
-              <div>
-                <label class="form-label">Link botao 1</label>
-                <input class="form-control" name="primary_button_link" value="{{ home.highlight.primary_button_link }}" />
-              </div>
-              <div>
-                <label class="form-label">Texto botao 2</label>
-                <input class="form-control" name="secondary_button_text" value="{{ home.highlight.secondary_button_text }}" />
-              </div>
-              <div>
-                <label class="form-label">Link botao 2</label>
-                <input class="form-control" name="secondary_button_link" value="{{ home.highlight.secondary_button_link }}" />
-              </div>
-              <div>
-                <label class="form-label">Texto alternativo da imagem</label>
-                <input class="form-control" name="image_alt" value="{{ home.highlight.image_alt }}" />
-              </div>
-              <div>
-                <label class="form-label">Nova imagem</label>
-                <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
-              </div>
-            </div>
-            <button type="submit" class="btn btn-warning mt-4">Salvar destaque</button>
-          </form>
-        </div>
-      </div>
+        <button type="submit" class="btn btn-warning">Salvar destaque</button>
+      </form>
     </div>
 
     <div class="admin-panel-card">

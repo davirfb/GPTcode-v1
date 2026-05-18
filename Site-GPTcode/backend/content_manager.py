@@ -33,16 +33,8 @@ DEFAULT_SITE_CONTENT: dict[str, Any] = {
             ],
         },
         "highlight": {
-            "title": "Uso de Realidade Aumentada na conscientizacao do tabagismo",
-            "authors": "Alessandro Aveni (UnB) e Claudio Ulisse (IFB)",
-            "description": "Artigo discute o mercado de NFTs e as causas da crise, explorando questoes legais relacionadas ao sistema de propriedade intelectual, regulamentacoes de IA e incertezas do mercado NFT.",
-            "journal": "Revista Processus de Estudos de Gestao, Juridicos e Financeiros",
-            "image": "imagens/logos/Intellectual Property and the Future of NFT Market - logo.png",
-            "image_alt": "Projeto em destaque",
-            "primary_button_text": "Ver Publicacao",
-            "primary_button_link": "/publicacoes",
-            "secondary_button_text": "Ver mais Publicacoes",
-            "secondary_button_link": "/publicacoes",
+            "type": "none",
+            "item_id": "",
         },
         "partners_title": "Parceiros e Apoiadores",
         "partners": [

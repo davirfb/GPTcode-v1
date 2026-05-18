@@ -12,7 +12,12 @@
 
 <section class="py-5">
   <div class="container">
-    <div class="d-flex justify-content-end mb-4">
+    <div class="d-flex flex-wrap gap-2 justify-content-end mb-4">
+      <form method="post" action="{{ url_for('admin_generate_publication_add_link') }}">
+        <button type="submit" class="btn btn-outline-warning">
+          <i class="bi bi-link-45deg me-1"></i>Adicionar com link
+        </button>
+      </form>
       <a href="#adicionar-publicacao" class="btn btn-warning">Adicionar nova publicacao</a>
     </div>
 
@@ -45,9 +50,16 @@
             </div>
             <button type="submit" class="btn btn-warning mt-4">Salvar publicacao</button>
           </form>
-          <form method="post" action="{{ url_for('admin_delete_publication', item_id=publication.id) }}" class="mt-2">
-            <button type="submit" class="btn btn-outline-danger btn-sm">Remover publicacao</button>
-          </form>
+          <div class="d-flex gap-2 mt-2">
+            <form method="post" action="{{ url_for('admin_generate_publication_edit_link', item_id=publication.id) }}">
+              <button type="submit" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-link-45deg me-1"></i>Gerar link de edicao
+              </button>
+            </form>
+            <form method="post" action="{{ url_for('admin_delete_publication', item_id=publication.id) }}">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover publicacao</button>
+            </form>
+          </div>
         </div>
       </div>
       {% endfor %}

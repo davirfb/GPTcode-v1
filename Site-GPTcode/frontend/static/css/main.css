@@ -9,6 +9,7 @@
   --dark-text: #212529;
   --font-family: "Poppins", sans-serif;
   --yellow: #ffcc00;
+  --navbar-height: 110px;
 }
 
 * {
@@ -22,6 +23,11 @@ body {
   color: var(--dark-text);
   line-height: 1.6;
   overflow-x: hidden;
+  padding-top: var(--navbar-height);
+}
+
+html {
+  scroll-padding-top: calc(var(--navbar-height) + 1rem);
 }
 
 .section-padding {
@@ -78,7 +84,7 @@ body {
 }
 
 .navbar-logo {
-  height: 65px;
+  height: 85px;
   transition: transform 0.4s ease;
 }
 
@@ -230,6 +236,15 @@ main {
   height: 100%;
   background-image: url("https://www.transparenttextures.com/patterns/cubes.png");
   opacity: 0.1;
+}
+
+.hero-logo {
+  display: block;
+  width: min(100%, 500px);
+  height: auto;
+  margin: 0 auto 1.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-buttons {
@@ -1083,7 +1098,7 @@ body {
 }
 
 .navbar-brand img {
-  height: 50px;
+  height: 85px;
 }
 
 .navbar-nav .nav-link {

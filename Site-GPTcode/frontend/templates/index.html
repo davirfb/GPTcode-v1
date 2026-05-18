@@ -6,8 +6,7 @@
     <img
       src="{{ url_for('static', filename='imagens/logos/Logo-GPTCode-png.png') }}"
       alt="GPTCode Logo"
-      class="mb-4 stagger-5"
-      style="max-width: 500px"
+      class="img-fluid hero-logo mb-4 stagger-5"
     />
     <h1 class="display-3 text-white fw-bold mb-4 fade-in-up stagger-1">
       {{ home.hero.title }}
@@ -79,54 +78,73 @@
   </div>
 </section>
 
+{% if highlight %}
 <section class="py-5 bg-light section-padding fade-in-up stagger-4">
   <h2 class="section-title text-center mb-5 fade-in-down stagger-1">
-    Destaques
+    Destaque
   </h2>
   <div class="container">
     <div class="row align-items-center g-0 shadow rounded-4 bg-white p-4 highlight-section fade-in-up stagger-2">
-      <div class="col-md-5 d-flex justify-content-center align-items-center">
-        <div class="highlight-image">
-          <img
-            src="{{ url_for('static', filename=home.highlight.image) }}"
-            alt="{{ home.highlight.image_alt }}"
-            class="img-fluid"
-          />
-        </div>
-      </div>
-      <div class="col-md-7">
-        <h3 class="fw-bold mb-2">{{ home.highlight.title }}</h3>
-        <p class="mb-1">
-          <strong>Autores:</strong> {{ home.highlight.authors }}
-        </p>
-        <p>{{ home.highlight.description }}</p>
-        {% if home.highlight.journal %}
-        <p class="mb-2 text-muted highlight-paragraph-secondary">
-          {{ home.highlight.journal }}
-        </p>
+      {% if highlight.type == 'publication' %}
+      <div class="col-12">
+        <span class="badge bg-warning text-dark mb-3">{{ highlight.item.year }}</span>
+        <h3 class="fw-bold mb-2">{{ highlight.item.title }}</h3>
+        <p class="mb-1"><strong>Autores:</strong> {{ highlight.item.participants }}</p>
+        {% if highlight.item.journal %}
+        <p class="mb-3 text-muted highlight-paragraph-secondary">{{ highlight.item.journal }}</p>
         {% endif %}
         <div class="d-flex flex-wrap gap-2">
-          {% if home.highlight.primary_button_text and home.highlight.primary_button_link %}
-          <a
-            href="{{ home.highlight.primary_button_link }}"
-            class="btn btn-warning fw-semibold px-4 py-2"
-          >
-            {{ home.highlight.primary_button_text }}
+          {% if highlight.item.doi_url %}
+          <a href="{{ highlight.item.doi_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-warning fw-semibold px-4 py-2">
+            Ver publicacao
           </a>
           {% endif %}
-          {% if home.highlight.secondary_button_text and home.highlight.secondary_button_link %}
-          <a
-            href="{{ home.highlight.secondary_button_link }}"
-            class="btn btn-warning fw-semibold px-4 py-2"
-          >
-            {{ home.highlight.secondary_button_text }}
+          <a href="{{ url_for('publicacoes') }}" class="btn btn-outline-warning fw-semibold px-4 py-2">
+            Ver mais publicacoes
           </a>
-          {% endif %}
         </div>
       </div>
+      {% elif highlight.type == 'project' %}
+      <div class="col-12">
+        <span class="badge bg-warning text-dark mb-3">{{ highlight.item.badge }}</span>
+        <h3 class="fw-bold mb-2">{{ highlight.item.title }}</h3>
+        <p class="mb-1"><strong>Estudantes:</strong> {{ highlight.item.students }}</p>
+        <p class="mb-3"><strong>Orientador:</strong> {{ highlight.item.advisor }}</p>
+        <div class="d-flex flex-wrap gap-2">
+          {% if highlight.item.about_text %}
+          <button type="button" class="btn btn-warning fw-semibold px-4 py-2" data-bs-toggle="modal" data-bs-target="#modal-highlight-project">
+            Sobre o projeto
+          </button>
+          {% endif %}
+          <a href="{{ url_for('projetos') }}" class="btn btn-outline-warning fw-semibold px-4 py-2">
+            Ver projetos
+          </a>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
 </section>
+{% if highlight.type == 'project' and highlight.item.about_text %}
+<div class="modal fade" id="modal-highlight-project" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="badge bg-warning text-dark me-2">{{ highlight.item.badge }}</span>
+        <h5 class="modal-title fw-bold">{{ highlight.item.title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Estudantes:</strong> {{ highlight.item.students }}</p>
+        <p><strong>Orientador:</strong> {{ highlight.item.advisor }}</p>
+        <hr />
+        <p style="white-space:pre-wrap;">{{ highlight.item.about_text }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
 
 <section class="py-5 section-padding fade-in-up stagger-5">
   <div class="container">

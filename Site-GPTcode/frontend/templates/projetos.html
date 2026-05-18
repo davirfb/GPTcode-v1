@@ -24,15 +24,6 @@
           <div class="card-header">
             <span class="badge bg-accent">{{ project.badge }}</span>
           </div>
-          {% if project.image %}
-          <div class="project-media">
-            <img
-              src="{{ url_for('static', filename=project.image) }}"
-              alt="{{ project.title }}"
-              class="project-card-image"
-            />
-          </div>
-          {% endif %}
           <h5 class="card-title">{{ project.title }}</h5>
           <p class="card-text text-muted small">
             <strong>Estudantes:</strong> {{ project.students }}
@@ -40,11 +31,11 @@
           <p class="card-text text-muted small">
             <strong>Orientador:</strong> {{ project.advisor }}
           </p>
-          {% if project.about_url %}
+          {% if project.about_text %}
           <div class="project-card-actions">
-            <a href="{{ project.about_url }}" class="btn btn-sm btn-warning" target="_blank" rel="noopener noreferrer">
+            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modal-{{ project.id }}">
               Sobre
-            </a>
+            </button>
           </div>
           {% endif %}
         </div>
@@ -53,4 +44,28 @@
     </section>
   </div>
 </main>
+
+{% for project in projects["items"] %}
+{% if project.about_text %}
+<div class="modal fade" id="modal-{{ project.id }}" tabindex="-1" aria-labelledby="modal-label-{{ project.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-warning text-dark">{{ project.badge }}</span>
+          <h5 class="modal-title mb-0" id="modal-label-{{ project.id }}">{{ project.title }}</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1"><strong>Estudantes:</strong> {{ project.students }}</p>
+        <p class="mb-3"><strong>Orientador:</strong> {{ project.advisor }}</p>
+        <hr />
+        <p style="white-space:pre-wrap;">{{ project.about_text }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
 {% endblock %}

@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if token_data.type == 'edit' else 'Adicionar' }} Publicacao | GPTCode{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">
+      {{ 'Editar Publicação' if token_data.type == 'edit' else 'Adicionar Publicação' }}
+    </h1>
+    <p class="lead text-white-50">
+      Preencha os dados abaixo. A submissão será revisada pela equipe antes de ser publicada.
+    </p>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container" style="max-width:700px;">
+    <div class="card shadow-sm border-0 p-4 p-md-5">
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Ano</label>
+          <input class="form-control" name="year" value="{{ existing.year if existing else '' }}" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Titulo</label>
+          <input class="form-control" name="title" value="{{ existing.title if existing else '' }}" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Participantes</label>
+          <textarea class="form-control" name="participants" rows="3">{{ existing.participants if existing else '' }}</textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Revista publicada</label>
+          <textarea class="form-control" name="journal" rows="3">{{ existing.journal if existing else '' }}</textarea>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Link DOI <span class="text-muted fw-normal">(opcional)</span></label>
+          <input class="form-control" name="doi_url" placeholder="https://..." value="{{ existing.doi_url if existing else '' }}" />
+        </div>
+        <button type="submit" class="btn btn-warning w-100 fw-semibold">Enviar para revisao</button>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}

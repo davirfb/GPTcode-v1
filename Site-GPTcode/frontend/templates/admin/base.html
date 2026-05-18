@@ -69,6 +69,16 @@
                 Equipe
               </a>
             </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'admin_pending' %}active{% endif %} position-relative" href="{{ url_for('admin_pending') }}">
+                Pendentes
+                {% if pending_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;">
+                  {{ pending_count }}
+                </span>
+                {% endif %}
+              </a>
+            </li>
             <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
               <a class="btn btn-outline-warning btn-sm" href="{{ url_for('index') }}" target="_blank" rel="noopener noreferrer">
                 Ver site
@@ -95,10 +105,23 @@
           {% if messages %}
             <div class="admin-flash-stack">
               {% for category, message in messages %}
+              {% if category == 'generated_link' %}
+              <div class="alert alert-info alert-dismissible fade show admin-alert" role="alert">
+                <strong><i class="bi bi-link-45deg me-1"></i>Link gerado — copie e envie para o destinatario:</strong>
+                <div class="input-group mt-2">
+                  <input type="text" class="form-control form-control-sm font-monospace" value="{{ message }}" id="generated-link-input" readonly />
+                  <button class="btn btn-outline-secondary btn-sm" type="button" onclick="navigator.clipboard.writeText(document.getElementById('generated-link-input').value); this.textContent='Copiado!';">
+                    Copiar
+                  </button>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+              {% else %}
               <div class="alert alert-{{ category }} alert-dismissible fade show admin-alert" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
               </div>
+              {% endif %}
               {% endfor %}
             </div>
           {% endif %}

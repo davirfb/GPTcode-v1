@@ -31,6 +31,8 @@
       ]
     },
     "highlight": {
+      "type": "none",
+      "item_id": "",
       "title": "Uso de Realidade Aumentada na conscientizacao do tabagismo",
       "authors": "Alessandro Aveni (UnB) e Claudio Ulisse (IFB)",
       "description": "Artigo discute o mercado de NFTs e as causas da crise, explorando questoes legais relacionadas ao sistema de propriedade intelectual, regulamentacoes de IA e incertezas do mercado NFT.",
@@ -71,8 +73,9 @@
         "title": "Desenvolvimento de um Sistema Web para Avaliacao Periodica de Curso de Graduacao no IFB - Campus Brasilia",
         "students": "Davi Rocha Fortes Bezerra",
         "advisor": "Prof. Dr. Dauster Souza Pereira",
-        "image": "",
-        "about_url": ""
+        "image": "uploads/projects/8ebcf711c7094de3b09f65ef421d2ace.jpg",
+        "about_url": "Veja mais",
+        "about_text": "Algo sobre esse projeto"
       },
       {
         "id": "project-pibiti-2025-2026",

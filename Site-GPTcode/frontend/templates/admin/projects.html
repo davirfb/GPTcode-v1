@@ -12,7 +12,12 @@
 
 <section class="py-5">
   <div class="container">
-    <div class="d-flex justify-content-end mb-4">
+    <div class="d-flex flex-wrap gap-2 justify-content-end mb-4">
+      <form method="post" action="{{ url_for('admin_generate_project_add_link') }}">
+        <button type="submit" class="btn btn-outline-warning">
+          <i class="bi bi-link-45deg me-1"></i>Adicionar com link
+        </button>
+      </form>
       <a href="#adicionar-projeto" class="btn btn-warning">Adicionar novo projeto</a>
     </div>
 
@@ -20,18 +25,11 @@
       {% for project in projects["items"] %}
       <div class="col-xl-6">
         <div class="admin-item-card h-100">
-          {% if project.image %}
-          <img class="admin-preview-image" src="{{ url_for('static', filename=project.image) }}" alt="{{ project.title }}" />
-          {% endif %}
-          <form method="post" action="{{ url_for('admin_update_project', item_id=project.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
+          <form method="post" action="{{ url_for('admin_update_project', item_id=project.id) }}" class="admin-form mt-4">
             <div class="admin-form-grid">
               <div>
                 <label class="form-label">Badge</label>
                 <input class="form-control" name="badge" value="{{ project.badge }}" />
-              </div>
-              <div>
-                <label class="form-label">Link do botao Sobre</label>
-                <input class="form-control" name="about_url" value="{{ project.about_url }}" />
               </div>
               <div class="admin-grid-span-2">
                 <label class="form-label">Titulo do projeto</label>
@@ -46,15 +44,22 @@
                 <input class="form-control" name="advisor" value="{{ project.advisor }}" />
               </div>
               <div class="admin-grid-span-2">
-                <label class="form-label">Nova imagem</label>
-                <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+                <label class="form-label">Texto do botao Sobre <span class="text-muted fw-normal">(opcional — ao preencher, exibe o botao no site)</span></label>
+                <textarea class="form-control" name="about_text" rows="4">{{ project.about_text }}</textarea>
               </div>
             </div>
             <button type="submit" class="btn btn-warning mt-4">Salvar projeto</button>
           </form>
-          <form method="post" action="{{ url_for('admin_delete_project', item_id=project.id) }}" class="mt-2">
-            <button type="submit" class="btn btn-outline-danger btn-sm">Remover projeto</button>
-          </form>
+          <div class="d-flex gap-2 mt-2">
+            <form method="post" action="{{ url_for('admin_generate_project_edit_link', item_id=project.id) }}">
+              <button type="submit" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-link-45deg me-1"></i>Gerar link de edicao
+              </button>
+            </form>
+            <form method="post" action="{{ url_for('admin_delete_project', item_id=project.id) }}">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover projeto</button>
+            </form>
+          </div>
         </div>
       </div>
       {% endfor %}
@@ -70,10 +75,6 @@
             <label class="form-label">Badge</label>
             <input class="form-control" name="badge" placeholder="Ex.: PTCC/TCC" />
           </div>
-          <div>
-            <label class="form-label">Link do botao Sobre</label>
-            <input class="form-control" name="about_url" placeholder="https://..." />
-          </div>
           <div class="admin-grid-span-2">
             <label class="form-label">Titulo do projeto</label>
             <input class="form-control" name="title" />
@@ -87,8 +88,8 @@
             <input class="form-control" name="advisor" />
           </div>
           <div class="admin-grid-span-2">
-            <label class="form-label">Imagem</label>
-            <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+            <label class="form-label">Texto do botao Sobre <span class="text-muted fw-normal">(opcional — ao preencher, exibe o botao no site)</span></label>
+            <textarea class="form-control" name="about_text" rows="4" placeholder="Descricao detalhada do projeto..."></textarea>
           </div>
         </div>
         <button type="submit" class="btn btn-warning mt-4">Adicionar projeto</button>

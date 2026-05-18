@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if token_data.type == 'edit' else 'Adicionar' }} Perfil | GPTCode{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">
+      {{ 'Editar Perfil' if token_data.type == 'edit' else 'Adicionar Perfil' }}
+    </h1>
+    <p class="lead text-white-50">
+      Preencha os dados abaixo. A submissão será revisada pela equipe antes de ser publicada.
+    </p>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container" style="max-width:700px;">
+    <div class="card shadow-sm border-0 p-4 p-md-5">
+      <form method="post" enctype="multipart/form-data">
+        {% if categories %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Categoria</label>
+          <select class="form-select" name="category" required>
+            <option value="" disabled {% if not existing %}selected{% endif %}>-- Selecione --</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if existing and existing.category == cat.id %}selected{% endif %}>
+              {{ cat.title }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nome completo</label>
+          <input class="form-control" name="name" value="{{ existing.name if existing else '' }}" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Cargo / Funcao <span class="text-muted fw-normal">(ex.: Aluno de Graduacao)</span></label>
+          <input class="form-control" name="role" value="{{ existing.role if existing else '' }}" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">GitHub <span class="text-muted fw-normal">(opcional)</span></label>
+          <input class="form-control" name="github_url" placeholder="https://github.com/usuario" value="{{ existing.github_url if existing else '' }}" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Lattes <span class="text-muted fw-normal">(opcional)</span></label>
+          <input class="form-control" name="lattes_url" placeholder="http://lattes.cnpq.br/..." value="{{ existing.lattes_url if existing else '' }}" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Descricao <span class="text-muted fw-normal">(opcional)</span></label>
+          <textarea class="form-control" name="description" rows="4">{{ existing.description if existing else '' }}</textarea>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Tags <span class="text-muted fw-normal">(separadas por virgula)</span></label>
+          <input class="form-control" name="tags" placeholder="Python, Web, Pesquisa" value="{{ existing.tags | join(', ') if existing and existing.tags else '' }}" />
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Foto de perfil <span class="text-muted fw-normal">(opcional)</span></label>
+          <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+          <div class="form-text">Formatos aceitos: PNG, JPG, JPEG, GIF, WEBP. Maximo 8 MB.</div>
+        </div>
+        <button type="submit" class="btn btn-warning w-100 fw-semibold">Enviar para revisao</button>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}

@@ -12,3 +12,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Dados de runtime (gerados automaticamente pelo app)
+backend/data/edit_tokens.json
+backend/data/pending_submissions.json
+
+# Imagens enviadas pelo painel admin
+frontend/static/uploads/

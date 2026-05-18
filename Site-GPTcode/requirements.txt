@@ -1,4 +1,4 @@
-Flask
-python-dotenv
-gunicorn
-firebase-admin
+Flask>=2.3,<3.0
+python-dotenv>=1.0
+gunicorn>=21.0
+firebase-admin>=6.2,<7.0

@@ -12,7 +12,12 @@
 
 <section class="py-5">
   <div class="container">
-    <div class="d-flex justify-content-end mb-4">
+    <div class="d-flex flex-wrap gap-2 justify-content-end mb-4">
+      <form method="post" action="{{ url_for('admin_generate_member_add_link') }}">
+        <button type="submit" class="btn btn-outline-warning">
+          <i class="bi bi-link-45deg me-1"></i>Adicionar com link
+        </button>
+      </form>
       <a href="#adicionar-membro" class="btn btn-warning">Adicionar novo membro</a>
     </div>
 
@@ -53,9 +58,7 @@
           <div class="admin-item-card">
             <form method="post" action="{{ url_for('admin_update_team_category', category_id=category.id) }}" class="admin-form">
               <label class="form-label">Titulo da categoria</label>
-              <input class="form-control mb-3" name="title" value="{{ category.title }}" />
-              <label class="form-label">Mensagem de categoria vazia</label>
-              <input class="form-control mb-4" name="empty_message" value="{{ category.empty_message }}" />
+              <input class="form-control mb-4" name="title" value="{{ category.title }}" />
               <button type="submit" class="btn btn-warning">Salvar categoria</button>
             </form>
             <form method="post" action="{{ url_for('admin_delete_team_category', category_id=category.id) }}" class="mt-2">
@@ -114,7 +117,11 @@
                 <div class="admin-form-grid">
                   <div>
                     <label class="form-label">Categoria</label>
-                    <select class="form-select" name="category">
+                    {% set valid_ids = team.categories | map(attribute='id') | list %}
+                    <select class="form-select" name="category" required>
+                      {% if member.category not in valid_ids %}
+                      <option value="" selected disabled>-- Selecione uma categoria --</option>
+                      {% endif %}
                       {% for category in team.categories %}
                       <option value="{{ category.id }}" {% if category.id == member.category %}selected{% endif %}>
                         {{ category.title }}
@@ -155,16 +162,23 @@
                   <button type="submit" class="btn btn-warning">Salvar membro</button>
                 </div>
               </form>
-              <form method="post" action="{{ url_for('admin_delete_team_member', item_id=member.id) }}" class="mt-3">
-                <button type="submit" class="btn btn-outline-danger btn-sm">Remover membro</button>
-              </form>
+              <div class="d-flex gap-2 mt-3">
+                <form method="post" action="{{ url_for('admin_generate_member_edit_link', item_id=member.id) }}">
+                  <button type="submit" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-link-45deg me-1"></i>Gerar link de edicao
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('admin_delete_team_member', item_id=member.id) }}">
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Remover membro</button>
+                </form>
+              </div>
             </div>
           </div>
           {% endfor %}
         </div>
         {% else %}
         <div class="admin-item-card admin-item-card-dashed">
-          <p class="admin-help-text mb-0">{{ section.empty_message }}</p>
+          <p class="admin-help-text mb-0">Nenhum membro nesta categoria.</p>
         </div>
         {% endif %}
       </section>

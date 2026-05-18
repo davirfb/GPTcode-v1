@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if token_data.type == 'edit' else 'Adicionar' }} Projeto | GPTCode{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">
+      {{ 'Editar Projeto' if token_data.type == 'edit' else 'Adicionar Projeto' }}
+    </h1>
+    <p class="lead text-white-50">
+      Preencha os dados abaixo. A submissão será revisada pela equipe antes de ser publicada.
+    </p>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container" style="max-width:700px;">
+    <div class="card shadow-sm border-0 p-4 p-md-5">
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Badge <span class="text-muted fw-normal">(ex.: PIBIC, TCC)</span></label>
+          <input class="form-control" name="badge" value="{{ existing.badge if existing else '' }}" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Titulo do projeto</label>
+          <input class="form-control" name="title" value="{{ existing.title if existing else '' }}" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Estudantes</label>
+          <input class="form-control" name="students" value="{{ existing.students if existing else '' }}" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Orientador</label>
+          <input class="form-control" name="advisor" value="{{ existing.advisor if existing else '' }}" />
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            Texto do botao Sobre
+            <span class="text-muted fw-normal">(opcional — descricao detalhada do projeto)</span>
+          </label>
+          <textarea class="form-control" name="about_text" rows="6">{{ existing.about_text if existing else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-warning w-100 fw-semibold">Enviar para revisao</button>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}
