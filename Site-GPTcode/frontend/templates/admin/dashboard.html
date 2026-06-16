@@ -100,6 +100,20 @@
           <a href="{{ url_for('admin_team') }}" class="btn btn-warning mt-4">Editar equipe</a>
         </div>
       </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Contato</h2>
+            <p class="admin-panel-subtitle">
+              Adicione, edite ou remova formas de contato exibidas na pagina publica.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Formas de contato: {{ contact["items"]|length }}</span>
+          </div>
+          <a href="{{ url_for('admin_contact') }}" class="btn btn-warning mt-4">Editar contato</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>

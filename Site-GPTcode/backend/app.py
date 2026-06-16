@@ -412,7 +412,8 @@ def index():
 
 @app.route("/contato")
 def contato():
-    return render_template("contato.html")
+    content = load_site_content()
+    return render_template("contato.html", contact=content["contact"])
 
 
 @app.route("/equipe")
@@ -466,6 +467,7 @@ def admin_dashboard():
         projects=content["projects"],
         publications=content["publications"],
         team=content["team"],
+        contact=content["contact"],
     )
 
 
@@ -985,6 +987,70 @@ def admin_delete_team_member(item_id: str):
     save_site_content(content)
     flash("Membro removido com sucesso.", "success")
     return redirect(url_for("admin_team"))
+
+
+# ─── ADMIN CONTACT ────────────────────────────────────────────────────────────
+
+@app.route("/admin/contato")
+@admin_required
+def admin_contact():
+    content = load_site_content()
+    return render_template("admin/contact.html", contact=content["contact"])
+
+
+@app.route("/admin/contato/add", methods=["POST"])
+@admin_required
+def admin_add_contact():
+    content = load_site_content()
+    content["contact"]["items"].append(
+        {
+            "id": f"contact-{uuid4().hex}",
+            "icon": clean_text(request.form.get("icon")) or "bi-chat-dots-fill",
+            "title": clean_text(request.form.get("title")),
+            "value": clean_text(request.form.get("value")),
+            "subtitle": clean_text(request.form.get("subtitle")),
+            "link": clean_text(request.form.get("link")),
+        }
+    )
+    save_site_content(content)
+    flash("Forma de contato adicionada com sucesso.", "success")
+    return redirect(url_for("admin_contact"))
+
+
+@app.route("/admin/contato/<item_id>/update", methods=["POST"])
+@admin_required
+def admin_update_contact(item_id: str):
+    content = load_site_content()
+    item = find_item(content["contact"]["items"], item_id)
+    if not item:
+        flash("Forma de contato não encontrada.", "danger")
+        return redirect(url_for("admin_contact"))
+
+    item["icon"] = clean_text(request.form.get("icon")) or "bi-chat-dots-fill"
+    item["title"] = clean_text(request.form.get("title"))
+    item["value"] = clean_text(request.form.get("value"))
+    item["subtitle"] = clean_text(request.form.get("subtitle"))
+    item["link"] = clean_text(request.form.get("link"))
+
+    save_site_content(content)
+    flash("Forma de contato atualizada.", "success")
+    return redirect(url_for("admin_contact"))
+
+
+@app.route("/admin/contato/<item_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_contact(item_id: str):
+    content = load_site_content()
+    items = content["contact"]["items"]
+    item = find_item(items, item_id)
+    if not item:
+        flash("Forma de contato não encontrada.", "danger")
+        return redirect(url_for("admin_contact"))
+
+    items.remove(item)
+    save_site_content(content)
+    flash("Forma de contato removida.", "success")
+    return redirect(url_for("admin_contact"))
 
 
 # ─── GENERATE ONE-TIME LINKS (admin only) ────────────────────────────────────

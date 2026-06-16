@@ -240,6 +240,26 @@
       }
     ]
   },
+  "contact": {
+    "items": [
+      {
+        "id": "contact-localizacao",
+        "icon": "bi-geo-alt-fill",
+        "title": "Localização",
+        "value": "SGAN Quadra 610\nSt. de Grandes Áreas Norte\nBrasília - DF",
+        "subtitle": "CEP: 70830-450",
+        "link": "https://www.google.com/maps/place//data=!4m2!3m1!1s0x935a3b1e02415707:0x3060d8a3139ab079?sa=X&ved=1t:8290&ictx=111"
+      },
+      {
+        "id": "contact-email",
+        "icon": "bi-envelope-fill",
+        "title": "E-mail",
+        "value": "gptcode@gptcode.com.br",
+        "subtitle": "Coordenação do GPTCode",
+        "link": "mailto:gptcode@gptcode.com.br"
+      }
+    ]
+  },
   "team": {
     "page": {
       "title": "Nossa Equipe",
