@@ -34,6 +34,38 @@
     {% endfor %}
   </div>
 
+  <!-- Formulário de Contato -->
+  <div class="row justify-content-center mb-5">
+    <div class="col-12 col-lg-8">
+      <div class="admin-panel-card p-4">
+        <h4 class="mb-4 text-center">Envie uma mensagem</h4>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+          {% endfor %}
+        {% endwith %}
+        <form method="post" action="{{ url_for('contato') }}">
+          <div class="mb-3">
+            <label for="nome" class="form-label">Nome</label>
+            <input type="text" class="form-control" id="nome" name="nome" required>
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">E-mail</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label for="mensagem" class="form-label">Mensagem</label>
+            <textarea class="form-control" id="mensagem" name="mensagem" rows="5" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Enviar mensagem</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Mapa ou Informações Adicionais -->
   <div class="row mt-5">
     <div class="col-12">

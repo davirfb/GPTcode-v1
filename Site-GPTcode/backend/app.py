@@ -30,6 +30,7 @@ except ImportError:  # pragma: no cover - package may be missing before setup
 
 try:
     from .content_manager import load_site_content, save_site_content
+    from .database import add_mensagem, get_mensagens, count_nao_lidas, mark_mensagem_lida
     from .token_manager import generate_token, validate_token, mark_token_used
     from .pending_manager import (
         add_pending,
@@ -42,6 +43,7 @@ try:
     from .mailer import send_notification
 except ImportError:  # pragma: no cover - fallback for `python backend/app.py`
     from content_manager import load_site_content, save_site_content
+    from database import add_mensagem, get_mensagens, count_nao_lidas, mark_mensagem_lida
     from token_manager import generate_token, validate_token, mark_token_used
     from pending_manager import (
         add_pending,
@@ -386,6 +388,7 @@ def inject_admin_state():
         "firebase_ready": not firebase_setup_issues,
         "firebase_setup_issues": firebase_setup_issues,
         "pending_count": count_pending(),
+        "unread_messages_count": count_nao_lidas(),
     }
 
 
@@ -410,9 +413,19 @@ def index():
     return render_template("index.html", home=content["home"], highlight=resolve_highlight(content))
 
 
-@app.route("/contato")
+@app.route("/contato", methods=["GET", "POST"])
 def contato():
     content = load_site_content()
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        email = request.form.get("email", "").strip()
+        mensagem = request.form.get("mensagem", "").strip()
+        if nome and email and mensagem:
+            add_mensagem(nome, email, mensagem)
+            flash("Mensagem enviada com sucesso!", "success")
+        else:
+            flash("Preencha todos os campos.", "danger")
+        return redirect(url_for("contato"))
     return render_template("contato.html", contact=content["contact"])
 
 
@@ -1314,6 +1327,25 @@ def admin_reject_submission(submission_id: str):
     mark_rejected(submission_id)
     flash("Submissão rejeitada.", "warning")
     return redirect(url_for("admin_pending"))
+
+
+@app.route("/admin/mensagens")
+@admin_required
+def admin_mensagens():
+    apenas_nao_lidas = request.args.get("filtro") == "nao_lidas"
+    mensagens = get_mensagens(apenas_nao_lidas=apenas_nao_lidas)
+    return render_template(
+        "admin/mensagens.html",
+        mensagens=mensagens,
+        apenas_nao_lidas=apenas_nao_lidas,
+    )
+
+
+@app.route("/admin/mensagens/<int:mensagem_id>/marcar-lida", methods=["POST"])
+@admin_required
+def admin_marcar_mensagem_lida(mensagem_id: int):
+    mark_mensagem_lida(mensagem_id)
+    return redirect(url_for("admin_mensagens", filtro=request.args.get("filtro")))
 
 
 if __name__ == "__main__":

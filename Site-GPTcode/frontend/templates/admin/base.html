@@ -75,6 +75,16 @@
               </a>
             </li>
             <li class="nav-item">
+              <a class="nav-link {% if request.endpoint == 'admin_mensagens' %}active{% endif %} position-relative" href="{{ url_for('admin_mensagens') }}">
+                Mensagens
+                {% if unread_messages_count is defined and unread_messages_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary" style="font-size:0.6rem;">
+                  {{ unread_messages_count }}
+                </span>
+                {% endif %}
+              </a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link {% if request.endpoint == 'admin_pending' %}active{% endif %} position-relative" href="{{ url_for('admin_pending') }}">
                 Pendentes
                 {% if pending_count > 0 %}
