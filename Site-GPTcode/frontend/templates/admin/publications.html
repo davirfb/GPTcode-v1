@@ -1,11 +1,12 @@
 {% extends 'admin/base.html' %}
+{% import '_campos.html' as c with context %}
 {% block title %}Publicacoes | GPTCode Admin{% endblock %}
 {% block content %}
 <header class="page-header d-flex align-items-center full-width-section">
   <div class="container text-center">
     <h1 class="display-4 text-white fw-bold">Edicao de Publicacoes</h1>
     <p class="lead text-white-50">
-      Atualize titulos, participantes, revista e DOI das publicacoes.
+      Atualize titulos, autores, veiculo, DOI e links das publicacoes.
     </p>
   </div>
 </header>
@@ -13,50 +14,33 @@
 <section class="py-5">
   <div class="container">
     <div class="d-flex flex-wrap gap-2 justify-content-end mb-4">
-      <form method="post" action="{{ url_for('admin_generate_publication_add_link') }}">
-        <button type="submit" class="btn btn-outline-warning">
-          <i class="bi bi-link-45deg me-1"></i>Adicionar com link
-        </button>
-      </form>
+      {{ c.botao_link('publicacao', 'criar', voltar=url_for('admin_publications'), rotulo='Gerar link para nova publicacao', classe_botao='btn-outline-warning') }}
       <a href="#adicionar-publicacao" class="btn btn-warning">Adicionar nova publicacao</a>
     </div>
 
+    {% if not publicacoes %}
+    <div class="admin-item-card admin-item-card-dashed mb-4">
+      <p class="admin-help-text mb-0">Nenhuma publicacao cadastrada.</p>
+    </div>
+    {% endif %}
+
     <div class="row g-4 mb-4">
-      {% for publication in publications["items"] %}
-      <div class="col-xl-6">
+      {% for publicacao in publicacoes %}
+      <div class="col-xl-6" id="publicacao-{{ publicacao.id }}">
         <div class="admin-item-card h-100">
-          <form method="post" action="{{ url_for('admin_update_publication', item_id=publication.id) }}" class="admin-form">
-            <div class="admin-form-grid">
-              <div>
-                <label class="form-label">Ano</label>
-                <input class="form-control" name="year" value="{{ publication.year }}" />
-              </div>
-              <div>
-                <label class="form-label">Link DOI</label>
-                <input class="form-control" name="doi_url" value="{{ publication.doi_url }}" />
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Titulo</label>
-                <input class="form-control" name="title" value="{{ publication.title }}" />
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Participantes</label>
-                <textarea class="form-control" name="participants" rows="3">{{ publication.participants }}</textarea>
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Revista publicada</label>
-                <textarea class="form-control" name="journal" rows="3">{{ publication.journal }}</textarea>
-              </div>
-            </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <span class="badge bg-warning text-dark">{{ publicacao.ano }}</span>
+            <span class="badge bg-secondary">{{ publicacao.tipo_rotulo }}</span>
+            <small class="text-muted ms-auto">Atualizado em {{ publicacao.atualizado_em }}</small>
+          </div>
+          <form method="post" action="{{ url_for('admin_update_publication', item_id=publicacao.id) }}" class="admin-form">
+            {{ c.campos_publicacao(forms['publicacao-' ~ publicacao.id], projetos) }}
             <button type="submit" class="btn btn-warning mt-4">Salvar publicacao</button>
           </form>
-          <div class="d-flex gap-2 mt-2">
-            <form method="post" action="{{ url_for('admin_generate_publication_edit_link', item_id=publication.id) }}">
-              <button type="submit" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-link-45deg me-1"></i>Gerar link de edicao
-              </button>
-            </form>
-            <form method="post" action="{{ url_for('admin_delete_publication', item_id=publication.id) }}">
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            {{ c.botao_link('publicacao', 'editar', publicacao.id, url_for('admin_publications') ~ '#publicacao-' ~ publicacao.id) }}
+            <form method="post" action="{{ url_for('admin_delete_publication', item_id=publicacao.id) }}"
+                  onsubmit="return confirm('Remover esta publicacao?')">
               <button type="submit" class="btn btn-outline-danger btn-sm">Remover publicacao</button>
             </form>
           </div>
@@ -70,28 +54,7 @@
         <h2 class="admin-panel-title">Adicionar nova publicacao</h2>
       </div>
       <form method="post" action="{{ url_for('admin_add_publication') }}" class="admin-form">
-        <div class="admin-form-grid">
-          <div>
-            <label class="form-label">Ano</label>
-            <input class="form-control" name="year" />
-          </div>
-          <div>
-            <label class="form-label">Link DOI</label>
-            <input class="form-control" name="doi_url" placeholder="https://..." />
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Titulo</label>
-            <input class="form-control" name="title" />
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Participantes</label>
-            <textarea class="form-control" name="participants" rows="3"></textarea>
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Revista publicada</label>
-            <textarea class="form-control" name="journal" rows="3"></textarea>
-          </div>
-        </div>
+        {{ c.campos_publicacao(forms['publicacao-novo'], projetos) }}
         <button type="submit" class="btn btn-warning mt-4">Adicionar publicacao</button>
       </form>
     </div>

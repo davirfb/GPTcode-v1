@@ -10,9 +10,17 @@ Site oficial do **GPTCode** — Grupo de Pesquisa em Tecnologias Computacionais 
 2025-2-vespertino-pi1-g3-2025-2-main/   ← raiz do workspace
 └── Site-GPTcode/                         ← projeto Flask (trabalhe aqui)
     ├── backend/
-    │   ├── app.py                        ← aplicação Flask principal (35 rotas)
-    │   ├── content_manager.py            ← leitura/escrita do JSON de conteúdo
-    │   └── data/site_content.json        ← "banco de dados" do site (JSON)
+    │   ├── app.py                        ← Flask: páginas públicas, painel e links de submissão
+    │   ├── api.py                        ← API REST /api/v1 (Blueprint)
+    │   ├── repositorio.py                ← CRUD sobre o SQLite (todas as escritas passam aqui)
+    │   ├── validadores.py                ← regras de negócio de cada entidade
+    │   ├── database.py                   ← conexão, criação e migração do schema
+    │   ├── migracao_v1.py                ← conversão do banco antigo (v1) para o v2
+    │   ├── auth.py / contexto.py         ← login (Firebase + sessão, token da API) e conexão por requisição
+    │   ├── erros.py / uploads.py
+    │   └── data/gptcode.db               ← banco SQLite (site_content.json só semeia instalação nova)
+    ├── database/schema.sql               ← modelo físico oficial
+    ├── tests/                            ← pytest (API, banco, links, painel, migração)
     ├── frontend/
     │   ├── templates/                    ← Jinja2 (base.html + páginas)
     │   └── static/
@@ -34,7 +42,8 @@ Site oficial do **GPTCode** — Grupo de Pesquisa em Tecnologias Computacionais 
 | Backend | Python 3.8+, Flask 2.0+, Jinja2 |
 | Autenticação | Firebase Admin SDK (Google OAuth) |
 | Frontend | HTML5, CSS3, JavaScript ES6+, Bootstrap 5.3 |
-| "Banco de dados" | JSON file (`backend/data/site_content.json`) |
+| Banco de dados | SQLite 3 — schema em `database/schema.sql` (ver docs/BANCO_DE_DADOS.md) |
+| API | REST JSON em `/api/v1` (ver docs/API.md) |
 | Deploy | Gunicorn + Render.com |
 
 ## Como rodar localmente
@@ -85,13 +94,13 @@ ADMIN_ALLOWED_DOMAINS=.ifb.edu.br
 FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.sitegptcode.json
 ```
 
-## Conteúdo editável
+## Dados e regras de negócio
 
-Todo o conteúdo do site vive em `backend/data/site_content.json`:
-- `home` — hero, sobre, publicação em destaque, slider, parceiros
-- `projects` — lista de projetos (PIBIC, PIBITI, TCC)
-- `publications` — publicações científicas
-- `team` — professores e alunos
+- Nunca grave direto no banco pelas rotas: use as funções de `backend/repositorio.py`, que validam com
+  `backend/validadores.py` e traduzem violações de integridade em `ValidacaoErro` (422) / `Conflito` (409).
+- Ausência de valor é `NULL` (nunca string vazia). Listas (participantes, autores, tags) ficam em tabelas associativas.
+- Mudou o schema? Edite `database/schema.sql`, incremente `PRAGMA user_version` e escreva a migração em `database.py`.
+- Rode `python -m pytest` antes de enviar.
 
 ## Convenções do projeto
 

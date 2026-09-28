@@ -7,11 +7,11 @@ block extra_head %}
 {% endblock %} {% block content %}
 <header class="page-header d-flex align-items-center full-width-section">
   <div class="container text-center">
-    <h1 class="display-4 text-white fw-bold">{{ team.page.title }}</h1>
-    <p class="lead text-white-50">{{ team.page.subtitle }}</p>
+    <h1 class="display-4 text-white fw-bold">{{ cfg.team_page_title }}</h1>
+    <p class="lead text-white-50">{{ cfg.team_page_subtitle }}</p>
     <div class="team-header-stats">
       <div class="team-stat-pill">
-        <strong>{{ team.members|length }}</strong>
+        <strong>{{ total }}</strong>
         <span>Membros</span>
       </div>
     </div>
@@ -26,17 +26,17 @@ block extra_head %}
     </section>
 
     <div class="team-cascade">
-      {% for section in team_sections %} {% set member_count =
-      section.members|length %}
+      {% for section in secoes %} {% set member_count =
+      section.membros|length %}
       <section
         class="team-category"
-        id="{{ section.id }}"
-        data-team-section="{{ section.id }}"
+        id="{{ section.slug }}"
+        data-team-section="{{ section.slug }}"
       >
         <div class="team-category-head">
           <div>
            
-            <h2 class="category-title">{{ section.title }}</h2>
+            <h2 class="category-title">{{ section.titulo }}</h2>
           </div>
           <span class="category-count">
             {{ member_count }} {{ 'membro' if member_count == 1 else 'membros'
@@ -44,17 +44,17 @@ block extra_head %}
           </span>
         </div>
         <div class="row g-4">
-          {% if section.members %} {% for member in section.members %}
+          {% if section.membros %} {% for member in section.membros %}
           <div
             class="col-xl-3 col-lg-4 col-md-6 team-member"
-            data-category="{{ section.id }}"
+            data-category="{{ section.slug }}"
           >
             <article class="member-card">
               <div class="member-img-container">
                 <img
-                  src="{{ url_for('static', filename=member.image if member.image else 'imagens/logos/gptcode-icon.png') }}"
+                  src="{{ url_for('static', filename=member.foto if member.foto else 'imagens/logos/gptcode-icon.png') }}"
                   class="member-img"
-                  alt="{{ member.name }}"
+                  alt="{{ member.nome }}"
                   loading="lazy"
                 />
                 {% if member.github_url or member.lattes_url %}
@@ -65,7 +65,7 @@ block extra_head %}
                       href="{{ member.github_url }}"
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label="GitHub de {{ member.name }}"
+                      aria-label="GitHub de {{ member.nome }}"
                     >
                       <i class="bi bi-github"></i>
                     </a>
@@ -74,7 +74,7 @@ block extra_head %}
                       href="{{ member.lattes_url }}"
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label="Lattes de {{ member.name }}"
+                      aria-label="Lattes de {{ member.nome }}"
                     >
                       <span class="lattes-icon">L</span>
                     </a>
@@ -84,11 +84,11 @@ block extra_head %}
                 {% endif %}
               </div>
               <div class="member-info">
-                <h5 class="member-name">{{ member.name }}</h5>
-                {% if member.role %}
-                <p class="member-role">{{ member.role }}</p>
-                {% endif %} {% if member.description %}
-                <p class="member-desc">{{ member.description }}</p>
+                <h5 class="member-name">{{ member.nome }}</h5>
+                {% if member.funcao %}
+                <p class="member-role">{{ member.funcao }}</p>
+                {% endif %} {% if member.descricao %}
+                <p class="member-desc">{{ member.descricao }}</p>
                 {% endif %} {% if member.tags %}
                 <div class="member-tags">
                   {% for tag in member.tags %}
@@ -126,7 +126,7 @@ block extra_head %}
           {% endfor %} {% else %}
           <div class="col-12">
             <div class="team-empty-state text-center mt-2">
-              <h3 class="no-members-title">{{ section.empty_message }}</h3>
+              <h3 class="no-members-title">{{ section.mensagem_vazia }}</h3>
               <p class="mb-0">
                 Novos integrantes podem ser cadastrados pelo painel
                 administrativo.
