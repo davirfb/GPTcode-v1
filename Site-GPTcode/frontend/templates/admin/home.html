@@ -5,44 +5,90 @@
   <div class="container text-center">
     <h1 class="display-4 text-white fw-bold">Edicao da Pagina Inicial</h1>
     <p class="lead text-white-50">
-      Controle o hero, o slider do sobre, os destaques e os parceiros.
+      Controle o hero, o slider do sobre, os destaques, os parceiros e os titulos das paginas.
     </p>
   </div>
 </header>
 
 <section class="py-5">
   <div class="container">
-    <div class="admin-panel-card mb-5">
+    <div class="admin-panel-card mb-5" id="textos">
       <div class="admin-panel-head">
         <h2 class="admin-panel-title">Textos gerais</h2>
         <p class="admin-panel-subtitle">
-          Atualize o hero, o texto do sobre e os botoes da secao inicial.
+          Atualize o hero, o texto do sobre, os botoes da secao inicial e os cabecalhos das paginas.
         </p>
       </div>
-      <form method="post" action="{{ url_for('admin_update_home_settings') }}" class="admin-form">
-        <input type="hidden" name="hero_title" value="{{ home.hero.title }}" />
-        <input type="hidden" name="hero_subtitle" value="{{ home.hero.subtitle }}" />
-        <input type="hidden" name="about_title" value="{{ home.about.title }}" />
-        <input type="hidden" name="partners_title" value="{{ home.partners_title }}" />
-        <input type="hidden" name="primary_button_text" value="{{ home.about.primary_button_text }}" />
-        <input type="hidden" name="primary_button_link" value="{{ home.about.primary_button_link }}" />
-        <input type="hidden" name="secondary_button_text" value="{{ home.about.secondary_button_text }}" />
-        <input type="hidden" name="secondary_button_link" value="{{ home.about.secondary_button_link }}" />
+      <form method="post" action="{{ url_for('admin_update_settings') }}" class="admin-form">
+        <input type="hidden" name="voltar" value="{{ url_for('admin_home') }}#textos" />
         <div class="admin-form-grid">
           <div class="admin-grid-span-2">
+            <label class="form-label">Titulo do hero</label>
+            <input class="form-control" name="hero_title" value="{{ cfg.hero_title }}" maxlength="2000" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Subtitulo do hero</label>
+            <input class="form-control" name="hero_subtitle" value="{{ cfg.hero_subtitle }}" maxlength="2000" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Titulo da secao Sobre</label>
+            <input class="form-control" name="about_title" value="{{ cfg.about_title }}" />
+          </div>
+          <div class="admin-grid-span-2">
             <label class="form-label">Lead do sobre</label>
-            <textarea class="form-control" name="about_lead" rows="3">{{ home.about.lead }}</textarea>
+            <textarea class="form-control" name="about_lead" rows="3">{{ cfg.about_lead }}</textarea>
           </div>
           <div class="admin-grid-span-2">
             <label class="form-label">Descricao do sobre</label>
-            <textarea class="form-control" name="about_description" rows="3">{{ home.about.description }}</textarea>
+            <textarea class="form-control" name="about_description" rows="3">{{ cfg.about_description }}</textarea>
+          </div>
+          <div>
+            <label class="form-label">Texto do botao principal</label>
+            <input class="form-control" name="about_primary_button_text" value="{{ cfg.about_primary_button_text }}" />
+          </div>
+          <div>
+            <label class="form-label">Link do botao principal</label>
+            <input class="form-control" name="about_primary_button_link" value="{{ cfg.about_primary_button_link }}" placeholder="/equipe" />
+          </div>
+          <div>
+            <label class="form-label">Texto do botao secundario</label>
+            <input class="form-control" name="about_secondary_button_text" value="{{ cfg.about_secondary_button_text }}" />
+          </div>
+          <div>
+            <label class="form-label">Link do botao secundario</label>
+            <input class="form-control" name="about_secondary_button_link" value="{{ cfg.about_secondary_button_link }}" placeholder="/publicacoes" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Titulo da secao de parceiros</label>
+            <input class="form-control" name="partners_title" value="{{ cfg.partners_title }}" />
           </div>
         </div>
+
+        <details class="mt-4">
+          <summary class="fw-semibold">Cabecalhos das paginas Projetos, Publicacoes e Equipe</summary>
+          <div class="admin-form-grid mt-3">
+            {% for chave, rotulo in [
+              ('projects_page_title', 'Projetos - titulo'),
+              ('projects_page_subtitle', 'Projetos - subtitulo'),
+              ('projects_section_title', 'Projetos - titulo da secao'),
+              ('publications_page_title', 'Publicacoes - titulo'),
+              ('publications_page_subtitle', 'Publicacoes - subtitulo'),
+              ('publications_section_title', 'Publicacoes - titulo da secao'),
+              ('team_page_title', 'Equipe - titulo'),
+              ('team_page_subtitle', 'Equipe - subtitulo'),
+            ] %}
+            <div>
+              <label class="form-label">{{ rotulo }}</label>
+              <input class="form-control" name="{{ chave }}" value="{{ cfg[chave] }}" />
+            </div>
+            {% endfor %}
+          </div>
+        </details>
         <button type="submit" class="btn btn-warning mt-4">Salvar textos</button>
       </form>
     </div>
 
-    <div class="admin-panel-card mb-5">
+    <div class="admin-panel-card mb-5" id="slider">
       <div class="admin-panel-head">
         <h2 class="admin-panel-title">Slider da secao Sobre</h2>
         <p class="admin-panel-subtitle">
@@ -50,18 +96,19 @@
         </p>
       </div>
       <div class="row g-4">
-        {% for slide in home.about.slider %}
+        {% for slide in slider %}
         <div class="col-lg-6">
           <div class="admin-item-card">
-            <img class="admin-preview-image" src="{{ url_for('static', filename=slide.image) }}" alt="{{ slide.alt }}" />
+            <img class="admin-preview-image" src="{{ url_for('static', filename=slide.imagem) }}" alt="{{ slide.texto_alternativo }}" />
             <form method="post" action="{{ url_for('admin_update_slider_image', item_id=slide.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
               <label class="form-label">Texto alternativo</label>
-              <input class="form-control mb-3" name="alt" value="{{ slide.alt }}" />
+              <input class="form-control mb-3" name="texto_alternativo" value="{{ slide.texto_alternativo }}" maxlength="150" required />
               <label class="form-label">Trocar imagem</label>
-              <input class="form-control mb-4" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+              <input class="form-control mb-4" type="file" name="imagem" accept=".png,.jpg,.jpeg,.gif,.webp" />
               <button type="submit" class="btn btn-warning">Salvar</button>
             </form>
-            <form method="post" action="{{ url_for('admin_delete_slider_image', item_id=slide.id) }}" class="mt-2">
+            <form method="post" action="{{ url_for('admin_delete_slider_image', item_id=slide.id) }}" class="mt-2"
+                  onsubmit="return confirm('Remover esta imagem do slider?')">
               <button type="submit" class="btn btn-outline-danger btn-sm">Remover imagem</button>
             </form>
           </div>
@@ -72,9 +119,9 @@
             <h3 class="admin-card-title">Adicionar nova imagem</h3>
             <form method="post" action="{{ url_for('admin_add_slider_image') }}" enctype="multipart/form-data" class="admin-form">
               <label class="form-label">Texto alternativo</label>
-              <input class="form-control mb-3" name="alt" placeholder="Descricao da imagem" />
+              <input class="form-control mb-3" name="texto_alternativo" placeholder="Descricao da imagem" maxlength="150" required />
               <label class="form-label">Imagem</label>
-              <input class="form-control mb-4" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" required />
+              <input class="form-control mb-4" type="file" name="imagem" accept=".png,.jpg,.jpeg,.gif,.webp" required />
               <button type="submit" class="btn btn-warning">Adicionar ao slider</button>
             </form>
           </div>
@@ -82,7 +129,7 @@
       </div>
     </div>
 
-    <div class="admin-panel-card mb-5">
+    <div class="admin-panel-card mb-5" id="destaque">
       <div class="admin-panel-head">
         <h2 class="admin-panel-title">Destaque principal</h2>
         <p class="admin-panel-subtitle">
@@ -90,27 +137,25 @@
         </p>
       </div>
       <form method="post" action="{{ url_for('admin_update_highlight') }}" class="admin-form">
-        {% set current_type = home.highlight.type if home.highlight.type else 'none' %}
-        {% set current_id = home.highlight.item_id if home.highlight.item_id else '' %}
-        {% set current_selection = (current_type + ':' + current_id) if current_type != 'none' else 'none' %}
+        {% set selecionado = destaque.tipo ~ ':' ~ destaque.item_id if destaque.item else 'nenhum' %}
         <div class="mb-4">
           <label class="form-label">Item em destaque</label>
           <select class="form-select" name="highlight_selection">
-            <option value="none" {% if current_selection == 'none' %}selected{% endif %}>-- Nenhum (sem destaque) --</option>
-            {% if publications['items'] %}
+            <option value="nenhum" {% if selecionado == 'nenhum' %}selected{% endif %}>-- Nenhum (sem destaque) --</option>
+            {% if publicacoes %}
             <optgroup label="Publicacoes">
-              {% for pub in publications['items'] %}
-              <option value="publication:{{ pub.id }}" {% if current_selection == 'publication:' + pub.id %}selected{% endif %}>
-                [{{ pub.year }}] {{ pub.title | truncate(80) }}
+              {% for pub in publicacoes %}
+              <option value="publicacao:{{ pub.id }}" {% if selecionado == 'publicacao:' ~ pub.id %}selected{% endif %}>
+                [{{ pub.ano }}] {{ pub.titulo | truncate(80) }}
               </option>
               {% endfor %}
             </optgroup>
             {% endif %}
-            {% if projects['items'] %}
+            {% if projetos %}
             <optgroup label="Projetos">
-              {% for proj in projects['items'] %}
-              <option value="project:{{ proj.id }}" {% if current_selection == 'project:' + proj.id %}selected{% endif %}>
-                [{{ proj.badge }}] {{ proj.title | truncate(80) }}
+              {% for proj in projetos %}
+              <option value="projeto:{{ proj.id }}" {% if selecionado == 'projeto:' ~ proj.id %}selected{% endif %}>
+                [{{ proj.rotulo }}] {{ proj.titulo | truncate(80) }}
               </option>
               {% endfor %}
             </optgroup>
@@ -121,7 +166,7 @@
       </form>
     </div>
 
-    <div class="admin-panel-card">
+    <div class="admin-panel-card" id="parceiros">
       <div class="admin-panel-head">
         <h2 class="admin-panel-title">Parceiros e apoiadores</h2>
         <p class="admin-panel-subtitle">
@@ -129,20 +174,21 @@
         </p>
       </div>
       <div class="row g-4 mb-4">
-        {% for partner in home.partners %}
+        {% for parceiro in parceiros %}
         <div class="col-lg-6">
           <div class="admin-item-card">
-            <img class="admin-preview-image admin-preview-logo" src="{{ url_for('static', filename=partner.image) }}" alt="{{ partner.name }}" />
-            <form method="post" action="{{ url_for('admin_update_partner', item_id=partner.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
+            <img class="admin-preview-image admin-preview-logo" src="{{ url_for('static', filename=parceiro.logo) }}" alt="{{ parceiro.nome }}" />
+            <form method="post" action="{{ url_for('admin_update_partner', item_id=parceiro.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
               <label class="form-label">Nome</label>
-              <input class="form-control mb-3" name="name" value="{{ partner.name }}" />
-              <label class="form-label">Link</label>
-              <input class="form-control mb-3" name="link" value="{{ partner.link }}" />
+              <input class="form-control mb-3" name="nome" value="{{ parceiro.nome }}" maxlength="120" required />
+              <label class="form-label">Link <span class="text-muted fw-normal">(opcional, http:// ou https://)</span></label>
+              <input class="form-control mb-3" name="link" type="url" value="{{ parceiro.link or '' }}" />
               <label class="form-label">Trocar logo</label>
-              <input class="form-control mb-4" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
+              <input class="form-control mb-4" type="file" name="logo" accept=".png,.jpg,.jpeg,.gif,.webp" />
               <button type="submit" class="btn btn-warning">Salvar</button>
             </form>
-            <form method="post" action="{{ url_for('admin_delete_partner', item_id=partner.id) }}" class="mt-2">
+            <form method="post" action="{{ url_for('admin_delete_partner', item_id=parceiro.id) }}" class="mt-2"
+                  onsubmit="return confirm('Remover este parceiro?')">
               <button type="submit" class="btn btn-outline-danger btn-sm">Remover parceiro</button>
             </form>
           </div>
@@ -156,15 +202,15 @@
           <div class="admin-form-grid">
             <div>
               <label class="form-label">Nome</label>
-              <input class="form-control" name="name" />
+              <input class="form-control" name="nome" maxlength="120" required />
             </div>
             <div>
-              <label class="form-label">Link</label>
-              <input class="form-control" name="link" />
+              <label class="form-label">Link <span class="text-muted fw-normal">(opcional)</span></label>
+              <input class="form-control" name="link" type="url" placeholder="https://" />
             </div>
             <div class="admin-grid-span-2">
               <label class="form-label">Logo</label>
-              <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" required />
+              <input class="form-control" type="file" name="logo" accept=".png,.jpg,.jpeg,.gif,.webp" required />
             </div>
           </div>
           <button type="submit" class="btn btn-warning mt-4">Adicionar parceiro</button>

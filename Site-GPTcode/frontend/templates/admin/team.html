@@ -1,11 +1,12 @@
 {% extends 'admin/base.html' %}
+{% import '_campos.html' as c with context %}
 {% block title %}Equipe | GPTCode Admin{% endblock %}
 {% block content %}
 <header class="page-header d-flex align-items-center full-width-section">
   <div class="container text-center">
     <h1 class="display-4 text-white fw-bold">Edicao da Equipe</h1>
     <p class="lead text-white-50">
-      Gerencie membros, categorias, GitHub, Lattes, imagens e tags.
+      Gerencie membros, categorias, GitHub, Lattes, fotos e tags.
     </p>
   </div>
 </header>
@@ -13,11 +14,7 @@
 <section class="py-5">
   <div class="container">
     <div class="d-flex flex-wrap gap-2 justify-content-end mb-4">
-      <form method="post" action="{{ url_for('admin_generate_member_add_link') }}">
-        <button type="submit" class="btn btn-outline-warning">
-          <i class="bi bi-link-45deg me-1"></i>Adicionar com link
-        </button>
-      </form>
+      {{ c.botao_link('membro', 'criar', voltar=url_for('admin_team'), rotulo='Gerar link para novo membro', classe_botao='btn-outline-warning') }}
       <a href="#adicionar-membro" class="btn btn-warning">Adicionar novo membro</a>
     </div>
 
@@ -25,150 +22,123 @@
       <div class="col-md-6 col-xl-3">
         <div class="admin-stat-card">
           <span class="admin-stat-label">Membros cadastrados</span>
-          <strong class="admin-stat-value">{{ team["members"]|length }}</strong>
+          <strong class="admin-stat-value">{{ membros|length }}</strong>
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
         <div class="admin-stat-card">
-          <span class="admin-stat-label">Categorias</span>
-          <strong class="admin-stat-value">{{ team.categories|length }}</strong>
+          <span class="admin-stat-label">Ocultos no site</span>
+          <strong class="admin-stat-value">{{ membros | rejectattr('ativo') | list | length }}</strong>
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
         <div class="admin-stat-card">
           <span class="admin-stat-label">Perfis com GitHub</span>
-          <strong class="admin-stat-value">{{ team["members"] | selectattr('github_url') | list | length }}</strong>
+          <strong class="admin-stat-value">{{ membros | selectattr('github_url') | list | length }}</strong>
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
         <div class="admin-stat-card">
           <span class="admin-stat-label">Perfis com Lattes</span>
-          <strong class="admin-stat-value">{{ team["members"] | selectattr('lattes_url') | list | length }}</strong>
+          <strong class="admin-stat-value">{{ membros | selectattr('lattes_url') | list | length }}</strong>
         </div>
       </div>
     </div>
 
-    <div class="admin-panel-card mb-5">
+    <div class="admin-panel-card mb-5" id="categorias">
       <div class="admin-panel-head">
         <h2 class="admin-panel-title">Categorias da equipe</h2>
+        <p class="admin-panel-subtitle">
+          Cada categoria e uma secao da pagina Equipe. So e possivel remover uma categoria vazia.
+        </p>
       </div>
       <div class="row g-4">
-        {% for category in team.categories %}
+        {% for categoria in categorias %}
+        {% set f = forms['categoria-' ~ categoria.id] %}
         <div class="col-lg-6">
           <div class="admin-item-card">
-            <form method="post" action="{{ url_for('admin_update_team_category', category_id=category.id) }}" class="admin-form">
-              <label class="form-label">Titulo da categoria</label>
-              <input class="form-control mb-4" name="title" value="{{ category.title }}" />
-              <button type="submit" class="btn btn-warning">Salvar categoria</button>
+            <form method="post" action="{{ url_for('admin_update_team_category', category_id=categoria.id) }}" class="admin-form">
+              <div class="admin-form-grid">
+                <div class="admin-grid-span-2">
+                  <label class="form-label">Titulo da categoria</label>
+                  <input class="form-control" name="titulo" value="{{ f.titulo }}" maxlength="80" required />
+                </div>
+                <div>
+                  <label class="form-label">Mensagem quando vazia</label>
+                  <input class="form-control" name="mensagem_vazia" value="{{ f.mensagem_vazia }}" maxlength="120" />
+                </div>
+                <div>
+                  <label class="form-label">Ordem</label>
+                  <input class="form-control" type="number" min="0" name="ordem_exibicao" value="{{ f.ordem_exibicao }}" />
+                </div>
+              </div>
+              <button type="submit" class="btn btn-warning mt-3">Salvar categoria</button>
             </form>
-            <form method="post" action="{{ url_for('admin_delete_team_category', category_id=category.id) }}" class="mt-2">
-              <button type="submit" class="btn btn-outline-danger btn-sm">Remover categoria</button>
+            <form method="post" action="{{ url_for('admin_delete_team_category', category_id=categoria.id) }}" class="mt-2"
+                  onsubmit="return confirm('Remover esta categoria?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm" {% if categoria.total_membros %}disabled title="Mova os membros antes de remover"{% endif %}>
+                Remover categoria ({{ categoria.total_membros }} membro{{ '' if categoria.total_membros == 1 else 's' }})
+              </button>
             </form>
           </div>
         </div>
         {% endfor %}
+        <div class="col-lg-6">
+          <div class="admin-item-card admin-item-card-dashed">
+            <h3 class="admin-card-title">Nova categoria</h3>
+            <form method="post" action="{{ url_for('admin_add_team_category') }}" class="admin-form">
+              <label class="form-label">Titulo</label>
+              <input class="form-control mb-3" name="titulo" value="{{ forms['categoria-novo'].titulo }}" maxlength="80" required />
+              <label class="form-label">Mensagem quando vazia <span class="text-muted fw-normal">(opcional)</span></label>
+              <input class="form-control mb-3" name="mensagem_vazia" value="{{ forms['categoria-novo'].mensagem_vazia }}" maxlength="120" />
+              <button type="submit" class="btn btn-warning">Criar categoria</button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="admin-panel-card mb-5" id="membros">
-      <div class="admin-panel-head admin-flex-head">
-        <div>
-          <h2 class="admin-panel-title">Gerenciar membros</h2>
-          <p class="admin-panel-subtitle">
-            Edite, remova ou reorganize os integrantes por categoria.
-          </p>
-        </div>
-        <a href="#adicionar-membro" class="btn btn-warning">Adicionar novo membro</a>
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Gerenciar membros</h2>
+        <p class="admin-panel-subtitle">
+          Edite ou remova os integrantes por categoria. Membros que orientam projetos nao podem ser removidos.
+        </p>
       </div>
 
-      <div class="admin-chip-list">
-        {% for section in team_sections %}
-        <a href="#section-{{ section.id }}" class="admin-chip-link">
-          <span>{{ section.title }}</span>
-          <strong>{{ section.members|length }}</strong>
-        </a>
-        {% endfor %}
-      </div>
-
-      {% for section in team_sections %}
-      {% set member_count = section.members|length %}
-      <section class="admin-section-block" id="section-{{ section.id }}">
-        <div class="admin-section-head">
-          <div>
-            <p class="admin-section-kicker">Categoria</p>
-            <h3 class="admin-card-title mb-0">{{ section.title }}</h3>
-          </div>
-          <span class="admin-section-count">
-            {{ member_count }} {{ 'membro' if member_count == 1 else 'membros' }}
-          </span>
+      {% for secao in secoes %}
+      <section class="mb-5" id="secao-{{ secao.slug }}">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3 class="admin-card-title mb-0">{{ secao.titulo }}</h3>
+          <span class="badge bg-secondary">{{ secao.membros|length }} {{ 'membro' if secao.membros|length == 1 else 'membros' }}</span>
         </div>
 
-        {% if section.members %}
+        {% if secao.membros %}
         <div class="row g-4">
-          {% for member in section.members %}
-          <div class="col-xl-6">
+          {% for membro in secao.membros %}
+          <div class="col-xl-6" id="membro-{{ membro.id }}">
             <div class="admin-item-card h-100">
-              <img
-                class="admin-preview-image"
-                src="{{ url_for('static', filename=member.image if member.image else 'imagens/logos/gptcode-icon.png') }}"
-                alt="{{ member.name }}"
-              />
-              <form method="post" action="{{ url_for('admin_update_team_member', item_id=member.id) }}" enctype="multipart/form-data" class="admin-form mt-4">
-                <div class="admin-form-grid">
-                  <div>
-                    <label class="form-label">Categoria</label>
-                    {% set valid_ids = team.categories | map(attribute='id') | list %}
-                    <select class="form-select" name="category" required>
-                      {% if member.category not in valid_ids %}
-                      <option value="" selected disabled>-- Selecione uma categoria --</option>
-                      {% endif %}
-                      {% for category in team.categories %}
-                      <option value="{{ category.id }}" {% if category.id == member.category %}selected{% endif %}>
-                        {{ category.title }}
-                      </option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                  <div>
-                    <label class="form-label">Role</label>
-                    <input class="form-control" name="role" value="{{ member.role }}" />
-                  </div>
-                  <div class="admin-grid-span-2">
-                    <label class="form-label">Nome</label>
-                    <input class="form-control" name="name" value="{{ member.name }}" />
-                  </div>
-                  <div>
-                    <label class="form-label">GitHub</label>
-                    <input class="form-control" name="github_url" value="{{ member.github_url }}" />
-                  </div>
-                  <div>
-                    <label class="form-label">Lattes</label>
-                    <input class="form-control" name="lattes_url" value="{{ member.lattes_url }}" />
-                  </div>
-                  <div class="admin-grid-span-2">
-                    <label class="form-label">Descricao</label>
-                    <textarea class="form-control" name="description" rows="4">{{ member.description }}</textarea>
-                  </div>
-                  <div class="admin-grid-span-2">
-                    <label class="form-label">Tags (separadas por virgula)</label>
-                    <input class="form-control" name="tags" value="{{ member.tags|join(', ') }}" />
-                  </div>
-                  <div class="admin-grid-span-2">
-                    <label class="form-label">Nova imagem</label>
-                    <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" />
-                  </div>
+              <div class="d-flex align-items-center gap-3 mb-3">
+                <img
+                  class="admin-preview-image"
+                  style="max-width:96px;"
+                  src="{{ url_for('static', filename=membro.foto if membro.foto else 'imagens/logos/gptcode-icon.png') }}"
+                  alt="{{ membro.nome }}"
+                />
+                <div>
+                  <strong>{{ membro.nome }}</strong>
+                  {% if not membro.ativo %}<span class="badge bg-dark ms-1">Oculto no site</span>{% endif %}
+                  <div class="text-muted small">Atualizado em {{ membro.atualizado_em }}</div>
                 </div>
-                <div class="admin-form-actions">
-                  <button type="submit" class="btn btn-warning">Salvar membro</button>
-                </div>
+              </div>
+              <form method="post" action="{{ url_for('admin_update_team_member', item_id=membro.id) }}" enctype="multipart/form-data" class="admin-form">
+                {{ c.campos_membro(forms['membro-' ~ membro.id], categorias, id_form=membro.id) }}
+                <button type="submit" class="btn btn-warning mt-4">Salvar membro</button>
               </form>
-              <div class="d-flex gap-2 mt-3">
-                <form method="post" action="{{ url_for('admin_generate_member_edit_link', item_id=member.id) }}">
-                  <button type="submit" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-link-45deg me-1"></i>Gerar link de edicao
-                  </button>
-                </form>
-                <form method="post" action="{{ url_for('admin_delete_team_member', item_id=member.id) }}">
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                {{ c.botao_link('membro', 'editar', membro.id, url_for('admin_team') ~ '#membro-' ~ membro.id) }}
+                <form method="post" action="{{ url_for('admin_delete_team_member', item_id=membro.id) }}"
+                      onsubmit="return confirm('Remover este membro? Nos projetos, ele passa a constar apenas pelo nome.')">
                   <button type="submit" class="btn btn-outline-danger btn-sm">Remover membro</button>
                 </form>
               </div>
@@ -190,44 +160,7 @@
         <h2 class="admin-panel-title">Adicionar novo membro</h2>
       </div>
       <form method="post" action="{{ url_for('admin_add_team_member') }}" enctype="multipart/form-data" class="admin-form">
-        <div class="admin-form-grid">
-          <div>
-            <label class="form-label">Categoria</label>
-            <select class="form-select" name="category">
-              {% for category in team.categories %}
-              <option value="{{ category.id }}">{{ category.title }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label class="form-label">Role</label>
-            <input class="form-control" name="role" />
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Nome</label>
-            <input class="form-control" name="name" />
-          </div>
-          <div>
-            <label class="form-label">GitHub</label>
-            <input class="form-control" name="github_url" />
-          </div>
-          <div>
-            <label class="form-label">Lattes</label>
-            <input class="form-control" name="lattes_url" />
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Descricao</label>
-            <textarea class="form-control" name="description" rows="4"></textarea>
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Tags (separadas por virgula)</label>
-            <input class="form-control" name="tags" />
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Imagem</label>
-            <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp" required />
-          </div>
-        </div>
+        {{ c.campos_membro(forms['membro-novo'], categorias) }}
         <button type="submit" class="btn btn-warning mt-4">Adicionar membro</button>
       </form>
     </div>

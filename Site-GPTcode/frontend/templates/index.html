@@ -9,10 +9,10 @@
       class="img-fluid hero-logo mb-4 stagger-5"
     />
     <h1 class="display-3 text-white fw-bold mb-4 fade-in-up stagger-1">
-      {{ home.hero.title }}
+      {{ cfg.hero_title }}
     </h1>
     <p class="lead text-white-50 my-4 fade-in-up stagger-2">
-      {{ home.hero.subtitle }}
+      {{ cfg.hero_subtitle }}
     </p>
   </div>
 </header>
@@ -22,46 +22,46 @@
     <div class="row align-items-center">
       <div class="col-lg-6">
         <h2 class="section-title text-center mb-5 fade-in-down stagger-1">
-          {{ home.about.title }}
+          {{ cfg.about_title }}
         </h2>
         <p class="lead fade-in-up stagger-2">
-          {{ home.about.lead }}
+          {{ cfg.about_lead }}
         </p>
         <p class="fade-in-up stagger-3">
-          {{ home.about.description }}
+          {{ cfg.about_description }}
         </p>
         <div class="quem-somos-buttons d-flex flex-wrap gap-3 mt-4 fade-in-up stagger-4">
-          {% if home.about.primary_button_text and home.about.primary_button_link %}
-          <a href="{{ home.about.primary_button_link }}" class="btn btn-outline-warning">
-            {{ home.about.primary_button_text }}
+          {% if cfg.about_primary_button_text and cfg.about_primary_button_link %}
+          <a href="{{ cfg.about_primary_button_link }}" class="btn btn-outline-warning">
+            {{ cfg.about_primary_button_text }}
           </a>
           {% endif %}
-          {% if home.about.secondary_button_text and home.about.secondary_button_link %}
-          <a href="{{ home.about.secondary_button_link }}" class="btn btn-warning">
-            {{ home.about.secondary_button_text }}
+          {% if cfg.about_secondary_button_text and cfg.about_secondary_button_link %}
+          <a href="{{ cfg.about_secondary_button_link }}" class="btn btn-warning">
+            {{ cfg.about_secondary_button_text }}
           </a>
           {% endif %}
         </div>
       </div>
       <div class="col-lg-6 text-center fade-in-right stagger-5">
-        {% if home.about.slider %}
+        {% if slider %}
         <div
           id="aboutSlider"
           class="carousel slide about-carousel shadow-lg rounded-4 overflow-hidden"
           data-bs-ride="carousel"
         >
           <div class="carousel-inner">
-            {% for slide in home.about.slider %}
+            {% for slide in slider %}
             <div class="carousel-item {% if loop.first %}active{% endif %}">
               <img
-                src="{{ url_for('static', filename=slide.image) }}"
+                src="{{ url_for('static', filename=slide.imagem) }}"
                 class="d-block w-100 about-slider-image"
-                alt="{{ slide.alt }}"
+                alt="{{ slide.texto_alternativo }}"
               />
             </div>
             {% endfor %}
           </div>
-          {% if home.about.slider|length > 1 %}
+          {% if slider|length > 1 %}
           <button class="carousel-control-prev" type="button" data-bs-target="#aboutSlider" data-bs-slide="prev">
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
             <span class="visually-hidden">Anterior</span>
@@ -78,24 +78,25 @@
   </div>
 </section>
 
-{% if highlight %}
+{% set item = destaque.item %}
+{% if item %}
 <section class="py-5 bg-light section-padding fade-in-up stagger-4">
   <h2 class="section-title text-center mb-5 fade-in-down stagger-1">
     Destaque
   </h2>
   <div class="container">
     <div class="row align-items-center g-0 shadow rounded-4 bg-white p-4 highlight-section fade-in-up stagger-2">
-      {% if highlight.type == 'publication' %}
+      {% if destaque.tipo == 'publicacao' %}
       <div class="col-12">
-        <span class="badge bg-warning text-dark mb-3">{{ highlight.item.year }}</span>
-        <h3 class="fw-bold mb-2">{{ highlight.item.title }}</h3>
-        <p class="mb-1"><strong>Autores:</strong> {{ highlight.item.participants }}</p>
-        {% if highlight.item.journal %}
-        <p class="mb-3 text-muted highlight-paragraph-secondary">{{ highlight.item.journal }}</p>
+        <span class="badge bg-warning text-dark mb-3">{{ item.ano }}</span>
+        <h3 class="fw-bold mb-2">{{ item.titulo }}</h3>
+        <p class="mb-1"><strong>Autores:</strong> {{ item.autores_texto }}</p>
+        {% if item.veiculo %}
+        <p class="mb-3 text-muted highlight-paragraph-secondary">{{ item.veiculo }}</p>
         {% endif %}
         <div class="d-flex flex-wrap gap-2">
-          {% if highlight.item.doi_url %}
-          <a href="{{ highlight.item.doi_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-warning fw-semibold px-4 py-2">
+          {% if item.link %}
+          <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-warning fw-semibold px-4 py-2">
             Ver publicacao
           </a>
           {% endif %}
@@ -104,14 +105,18 @@
           </a>
         </div>
       </div>
-      {% elif highlight.type == 'project' %}
+      {% else %}
       <div class="col-12">
-        <span class="badge bg-warning text-dark mb-3">{{ highlight.item.badge }}</span>
-        <h3 class="fw-bold mb-2">{{ highlight.item.title }}</h3>
-        <p class="mb-1"><strong>Estudantes:</strong> {{ highlight.item.students }}</p>
-        <p class="mb-3"><strong>Orientador:</strong> {{ highlight.item.advisor }}</p>
+        <span class="badge bg-warning text-dark mb-3">{{ item.rotulo }}</span>
+        <h3 class="fw-bold mb-2">{{ item.titulo }}</h3>
+        {% if item.participantes %}
+        <p class="mb-1"><strong>Estudantes:</strong> {{ item.participantes | map(attribute='nome') | lista_nomes }}</p>
+        {% endif %}
+        {% if item.orientador %}
+        <p class="mb-3"><strong>Orientador:</strong> {{ item.orientador.nome }}</p>
+        {% endif %}
         <div class="d-flex flex-wrap gap-2">
-          {% if highlight.item.about_text %}
+          {% if item.descricao %}
           <button type="button" class="btn btn-warning fw-semibold px-4 py-2" data-bs-toggle="modal" data-bs-target="#modal-highlight-project">
             Sobre o projeto
           </button>
@@ -125,20 +130,24 @@
     </div>
   </div>
 </section>
-{% if highlight.type == 'project' and highlight.item.about_text %}
+{% if destaque.tipo == 'projeto' and item.descricao %}
 <div class="modal fade" id="modal-highlight-project" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <span class="badge bg-warning text-dark me-2">{{ highlight.item.badge }}</span>
-        <h5 class="modal-title fw-bold">{{ highlight.item.title }}</h5>
+        <span class="badge bg-warning text-dark me-2">{{ item.rotulo }}</span>
+        <h5 class="modal-title fw-bold">{{ item.titulo }}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <p><strong>Estudantes:</strong> {{ highlight.item.students }}</p>
-        <p><strong>Orientador:</strong> {{ highlight.item.advisor }}</p>
+        {% if item.participantes %}
+        <p><strong>Estudantes:</strong> {{ item.participantes | map(attribute='nome') | lista_nomes }}</p>
+        {% endif %}
+        {% if item.orientador %}
+        <p><strong>Orientador:</strong> {{ item.orientador.nome }}</p>
+        {% endif %}
         <hr />
-        <p style="white-space:pre-wrap;">{{ highlight.item.about_text }}</p>
+        <p style="white-space:pre-wrap;">{{ item.descricao }}</p>
       </div>
     </div>
   </div>
@@ -149,18 +158,18 @@
 <section class="py-5 section-padding fade-in-up stagger-5">
   <div class="container">
     <h2 class="section-title text-center mb-5 fade-in-down stagger-1">
-      {{ home.partners_title }}
+      {{ cfg.partners_title }}
     </h2>
     <div class="row justify-content-center fade-in-up stagger-2">
-      {% for partner in home.partners %}
+      {% for parceiro in parceiros %}
       <div class="col-md-4 text-center mb-4">
-        <a href="{{ partner.link }}" target="_blank" rel="noopener noreferrer">
-          <img
-            src="{{ url_for('static', filename=partner.image) }}"
-            class="img-fluid partner-logo"
-            alt="{{ partner.name }}"
-          />
+        {% if parceiro.link %}
+        <a href="{{ parceiro.link }}" target="_blank" rel="noopener noreferrer">
+          <img src="{{ url_for('static', filename=parceiro.logo) }}" class="img-fluid partner-logo" alt="{{ parceiro.nome }}" />
         </a>
+        {% else %}
+        <img src="{{ url_for('static', filename=parceiro.logo) }}" class="img-fluid partner-logo" alt="{{ parceiro.nome }}" />
+        {% endif %}
       </div>
       {% endfor %}
     </div>

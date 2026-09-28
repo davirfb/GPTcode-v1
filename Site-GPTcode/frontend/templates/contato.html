@@ -14,20 +14,20 @@
 <div class="container py-5">
   <!-- Informações de Contato -->
   <div class="row mb-5 justify-content-center">
-    {% for item in contact["items"] %}
+    {% for item in contatos %}
     <div class="col-12 col-md-6 col-lg-auto mb-4 d-flex justify-content-center">
       <div class="contact-info-card text-center contact-card-max-width">
         <div class="contact-icon">
-          <i class="bi {{ item.icon }}"></i>
+          <i class="bi {{ item.icone }}"></i>
         </div>
-        <h5>{{ item.title }}</h5>
+        <h5>{{ item.titulo }}</h5>
         {% if item.link %}
-        <a href="{{ item.link }}">{{ item.value | replace('\n', '<br>') | safe }}</a>
+        <a href="{{ item.link }}" style="white-space:pre-line;">{{ item.valor }}</a>
         {% else %}
-        <p>{{ item.value | replace('\n', '<br>') | safe }}</p>
+        <p style="white-space:pre-line;">{{ item.valor }}</p>
         {% endif %}
-        {% if item.subtitle %}
-        <p class="small text-muted">{{ item.subtitle }}</p>
+        {% if item.subtitulo %}
+        <p class="small text-muted">{{ item.subtitulo }}</p>
         {% endif %}
       </div>
     </div>
@@ -47,18 +47,26 @@
           </div>
           {% endfor %}
         {% endwith %}
-        <form method="post" action="{{ url_for('contato') }}">
+        <form method="post" action="{{ url_for('contato') }}" novalidate>
           <div class="mb-3">
             <label for="nome" class="form-label">Nome</label>
-            <input type="text" class="form-control" id="nome" name="nome" required>
+            <input type="text" class="form-control {% if erros.nome_remetente %}is-invalid{% endif %}" id="nome" name="nome" value="{{ enviado.nome_remetente or '' }}" maxlength="120" required>
+            {% if erros.nome_remetente %}<div class="invalid-feedback">{{ erros.nome_remetente }}</div>{% endif %}
           </div>
           <div class="mb-3">
             <label for="email" class="form-label">E-mail</label>
-            <input type="email" class="form-control" id="email" name="email" required>
+            <input type="email" class="form-control {% if erros.email_remetente %}is-invalid{% endif %}" id="email" name="email" value="{{ enviado.email_remetente or '' }}" maxlength="254" required>
+            {% if erros.email_remetente %}<div class="invalid-feedback">{{ erros.email_remetente }}</div>{% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="assunto" class="form-label">Assunto <span class="text-muted small">(opcional)</span></label>
+            <input type="text" class="form-control {% if erros.assunto %}is-invalid{% endif %}" id="assunto" name="assunto" value="{{ enviado.assunto or '' }}" maxlength="150">
+            {% if erros.assunto %}<div class="invalid-feedback">{{ erros.assunto }}</div>{% endif %}
           </div>
           <div class="mb-3">
             <label for="mensagem" class="form-label">Mensagem</label>
-            <textarea class="form-control" id="mensagem" name="mensagem" rows="5" required></textarea>
+            <textarea class="form-control {% if erros.mensagem %}is-invalid{% endif %}" id="mensagem" name="mensagem" rows="5" minlength="10" maxlength="5000" required>{{ enviado.mensagem or '' }}</textarea>
+            {% if erros.mensagem %}<div class="invalid-feedback">{{ erros.mensagem }}</div>{% endif %}
           </div>
           <button type="submit" class="btn btn-primary w-100">Enviar mensagem</button>
         </form>

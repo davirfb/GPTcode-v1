@@ -1,11 +1,49 @@
 {% extends 'admin/base.html' %}
 {% block title %}Contato | GPTCode Admin{% endblock %}
+
+
 {% block content %}
+{% macro campos_contato(f) %}
+<div class="admin-form-grid">
+  <div>
+    <label class="form-label">Tipo</label>
+    <select class="form-select" name="tipo" required>
+      {% for valor, rotulo in rotulos.tipos_contato.items() %}
+      <option value="{{ valor }}" {% if f.tipo == valor %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="form-label">Titulo</label>
+    <input class="form-control" name="titulo" value="{{ f.titulo }}" maxlength="60" placeholder="Ex.: E-mail" required />
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Valor <span class="text-muted fw-normal small">(texto exibido no card; quebras de linha sao mantidas)</span></label>
+    <textarea class="form-control" name="valor" rows="2" maxlength="300" required>{{ f.valor }}</textarea>
+  </div>
+  <div>
+    <label class="form-label">Subtitulo <span class="text-muted fw-normal small">(opcional)</span></label>
+    <input class="form-control" name="subtitulo" value="{{ f.subtitulo }}" maxlength="120" />
+  </div>
+  <div>
+    <label class="form-label">Link <span class="text-muted fw-normal small">(opcional - https://, mailto: ou tel:)</span></label>
+    <input class="form-control" name="link" value="{{ f.link }}" />
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Icone Bootstrap
+      <span class="text-muted fw-normal small">
+        (opcional; vazio usa o icone do tipo - <a href="https://icons.getbootstrap.com/" target="_blank" rel="noopener noreferrer">lista de icones</a>)
+      </span>
+    </label>
+    <input class="form-control font-monospace" name="icone" value="{{ f.icone }}" placeholder="Ex.: bi-envelope-fill" />
+  </div>
+</div>
+{% endmacro %}
 <header class="page-header d-flex align-items-center full-width-section">
   <div class="container text-center">
-    <h1 class="display-4 text-white fw-bold">Edição de Contato</h1>
+    <h1 class="display-4 text-white fw-bold">Edicao de Contato</h1>
     <p class="lead text-white-50">
-      Gerencie as formas de contato exibidas na página pública.
+      Gerencie as formas de contato exibidas na pagina publica.
     </p>
   </div>
 </header>
@@ -17,48 +55,22 @@
     </div>
 
     <div class="row g-4 mb-4">
-      {% for item in contact["items"] %}
+      {% for item in contatos %}
       <div class="col-xl-6">
         <div class="admin-item-card h-100">
           <div class="d-flex align-items-center gap-2 mb-3">
-            <i class="bi {{ item.icon }} fs-4 text-warning"></i>
-            <strong>{{ item.title }}</strong>
+            <i class="bi {{ item.icone }} fs-4 text-warning"></i>
+            <strong>{{ item.titulo }}</strong>
+            <span class="badge bg-secondary ms-auto">{{ item.tipo_rotulo }}</span>
           </div>
           <form method="post" action="{{ url_for('admin_update_contact', item_id=item.id) }}" class="admin-form">
-            <div class="admin-form-grid">
-              <div>
-                <label class="form-label">Ícone Bootstrap
-                  <span class="text-muted fw-normal small">
-                    (<a href="https://icons.getbootstrap.com/" target="_blank" rel="noopener noreferrer">lista de ícones</a>)
-                  </span>
-                </label>
-                <input class="form-control font-monospace" name="icon" value="{{ item.icon }}" placeholder="Ex.: bi-envelope-fill" />
-              </div>
-              <div>
-                <label class="form-label">Título</label>
-                <input class="form-control" name="title" value="{{ item.title }}" />
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Valor <span class="text-muted fw-normal small">(texto exibido no card)</span></label>
-                <textarea class="form-control" name="value" rows="2">{{ item.value }}</textarea>
-              </div>
-              <div>
-                <label class="form-label">Subtítulo <span class="text-muted fw-normal small">(opcional)</span></label>
-                <input class="form-control" name="subtitle" value="{{ item.subtitle }}" />
-              </div>
-              <div>
-                <label class="form-label">Link <span class="text-muted fw-normal small">(opcional — ex.: mailto:, https://)</span></label>
-                <input class="form-control" name="link" value="{{ item.link }}" />
-              </div>
-            </div>
+            {{ campos_contato(forms['contato-' ~ item.id]) }}
             <button type="submit" class="btn btn-warning mt-4">Salvar</button>
           </form>
           <div class="mt-2">
-            <form method="post" action="{{ url_for('admin_delete_contact', item_id=item.id) }}">
-              <button type="submit" class="btn btn-outline-danger btn-sm"
-                onclick="return confirm('Remover esta forma de contato?')">
-                Remover
-              </button>
+            <form method="post" action="{{ url_for('admin_delete_contact', item_id=item.id) }}"
+                  onsubmit="return confirm('Remover esta forma de contato?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
             </form>
           </div>
         </div>
@@ -75,32 +87,7 @@
         <h2 class="admin-panel-title">Adicionar forma de contato</h2>
       </div>
       <form method="post" action="{{ url_for('admin_add_contact') }}" class="admin-form">
-        <div class="admin-form-grid">
-          <div>
-            <label class="form-label">Ícone Bootstrap
-              <span class="text-muted fw-normal small">
-                (<a href="https://icons.getbootstrap.com/" target="_blank" rel="noopener noreferrer">lista de ícones</a>)
-              </span>
-            </label>
-            <input class="form-control font-monospace" name="icon" placeholder="Ex.: bi-telephone-fill" />
-          </div>
-          <div>
-            <label class="form-label">Título</label>
-            <input class="form-control" name="title" placeholder="Ex.: Telefone" />
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Valor <span class="text-muted fw-normal small">(texto exibido no card)</span></label>
-            <textarea class="form-control" name="value" rows="2" placeholder="Ex.: (61) 9 9999-9999"></textarea>
-          </div>
-          <div>
-            <label class="form-label">Subtítulo <span class="text-muted fw-normal small">(opcional)</span></label>
-            <input class="form-control" name="subtitle" placeholder="Ex.: Horário comercial" />
-          </div>
-          <div>
-            <label class="form-label">Link <span class="text-muted fw-normal small">(opcional)</span></label>
-            <input class="form-control" name="link" placeholder="Ex.: tel:+556199999999" />
-          </div>
-        </div>
+        {{ campos_contato(forms['contato-novo']) }}
         <button type="submit" class="btn btn-warning mt-4">Adicionar contato</button>
       </form>
     </div>
