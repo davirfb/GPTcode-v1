@@ -1,11 +1,13 @@
 {% extends 'admin/base.html' %}
+{% import '_campos.html' as c with context %}
 {% block title %}Submissoes Pendentes | GPTCode Admin{% endblock %}
 {% block content %}
+{% set rotulo_recurso = {'membro': 'Membro da equipe', 'projeto': 'Projeto', 'publicacao': 'Publicacao'} %}
 <header class="page-header d-flex align-items-center full-width-section">
   <div class="container text-center">
-    <h1 class="display-4 text-white fw-bold">Submissoes Pendentes</h1>
+    <h1 class="display-4 text-white fw-bold">Submissoes e Links</h1>
     <p class="lead text-white-50">
-      Revise e valide os conteudos enviados por link antes de publicar no site.
+      Revise o que foi enviado pelos links de uso unico antes de publicar no site.
     </p>
   </div>
 </header>
@@ -13,48 +15,56 @@
 <section class="py-5">
   <div class="container">
 
-    {% if not submissions %}
-    <div class="admin-panel-card text-center py-5">
+    <h2 class="admin-panel-title mb-3">Pendentes de validacao</h2>
+    {% if not submissoes %}
+    <div class="admin-panel-card text-center py-5 mb-5">
       <i class="bi bi-inbox text-muted" style="font-size:3rem;"></i>
       <p class="text-muted mt-3 mb-0">Nenhuma submissao pendente no momento.</p>
     </div>
     {% endif %}
 
-    {% for submission in submissions %}
-    <div class="admin-item-card mb-4">
+    {% for submissao in submissoes %}
+    <div class="admin-item-card mb-4" id="submissao-{{ submissao.id }}">
       <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
         <div>
-          <span class="badge bg-warning text-dark me-2">{{ submission.resource_label }}</span>
-          <span class="badge bg-secondary">{{ 'Adicao' if submission.type == 'add' else 'Edicao' }}</span>
-          <p class="text-muted small mt-2 mb-0">
-            Enviado em: {{ submission.submitted_at[:19].replace('T', ' ') }}
-          </p>
+          <span class="badge bg-warning text-dark me-2">{{ rotulo_recurso[submissao.recurso] }}</span>
+          <span class="badge bg-secondary">{{ 'Novo cadastro' if submissao.acao == 'criar' else 'Edicao' }}</span>
+          <p class="text-muted small mt-2 mb-0">Enviado em: {{ submissao.enviada_em }} (UTC)</p>
         </div>
       </div>
 
       <div class="table-responsive mb-4">
         <table class="table table-sm table-bordered align-middle">
           <thead class="table-light">
-            <tr><th>Campo</th><th>Valor enviado</th></tr>
+            <tr>
+              <th style="width:160px;">Campo</th>
+              {% if submissao.acao == 'editar' %}<th>Valor atual</th>{% endif %}
+              <th>Valor enviado</th>
+            </tr>
           </thead>
           <tbody>
-            {% for key, value in submission.data.items() %}
-            <tr>
-              <td class="fw-semibold text-nowrap" style="width:180px;">{{ key }}</td>
-              <td style="white-space:pre-wrap;">{{ value if value is string else value | join(', ') }}</td>
+            {% for rotulo, valor in submissao.campos %}
+            {% set atual = submissao.campos_atuais[loop.index0][1] if submissao.campos_atuais else '' %}
+            {% set mudou = submissao.acao == 'editar' and atual != valor %}
+            <tr {% if mudou %}class="table-warning"{% endif %}>
+              <td class="fw-semibold text-nowrap">{{ rotulo }}</td>
+              {% if submissao.acao == 'editar' %}<td style="white-space:pre-wrap;">{{ atual }}</td>{% endif %}
+              <td style="white-space:pre-wrap;">{% if rotulo == 'Foto' and submissao.dados.foto %}<img src="{{ url_for('static', filename=submissao.dados.foto) }}" alt="Foto enviada" style="max-height:120px;" />{% else %}{{ valor }}{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
+        {% if submissao.acao == 'editar' %}<p class="small text-muted mb-0">Linhas destacadas foram alteradas.</p>{% endif %}
       </div>
 
       <div class="d-flex gap-2">
-        <form method="post" action="{{ url_for('admin_approve_submission', submission_id=submission.id) }}">
+        <form method="post" action="{{ url_for('admin_approve_submission', submission_id=submissao.id) }}">
           <button type="submit" class="btn btn-success">
             <i class="bi bi-check-lg me-1"></i>Aprovar e publicar
           </button>
         </form>
-        <form method="post" action="{{ url_for('admin_reject_submission', submission_id=submission.id) }}">
+        <form method="post" action="{{ url_for('admin_reject_submission', submission_id=submissao.id) }}"
+              onsubmit="return confirm('Rejeitar esta submissao?')">
           <button type="submit" class="btn btn-outline-danger">
             <i class="bi bi-x-lg me-1"></i>Rejeitar
           </button>
@@ -62,6 +72,76 @@
       </div>
     </div>
     {% endfor %}
+
+    <div class="admin-panel-card mb-5" id="links">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Links ativos</h2>
+        <p class="admin-panel-subtitle">
+          Cada link funciona uma unica vez e expira em 7 dias. O endereco completo so aparece no momento em que e gerado.
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        {{ c.botao_link('membro', 'criar', voltar=url_for('admin_pending') ~ '#links', rotulo='Novo membro', classe_botao='btn-outline-warning btn-sm') }}
+        {{ c.botao_link('projeto', 'criar', voltar=url_for('admin_pending') ~ '#links', rotulo='Novo projeto', classe_botao='btn-outline-warning btn-sm') }}
+        {{ c.botao_link('publicacao', 'criar', voltar=url_for('admin_pending') ~ '#links', rotulo='Nova publicacao', classe_botao='btn-outline-warning btn-sm') }}
+      </div>
+      {% if links %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>#</th><th>Recurso</th><th>Acao</th><th>Item</th><th>Criado em</th><th>Expira em</th><th></th></tr></thead>
+          <tbody>
+            {% for link in links %}
+            <tr>
+              <td>{{ link.id }}</td>
+              <td>{{ rotulo_recurso[link.recurso] }}</td>
+              <td>{{ 'Criar' if link.acao == 'criar' else 'Editar' }}</td>
+              <td>{{ link.item_id or '-' }}</td>
+              <td class="small">{{ link.criado_em }}</td>
+              <td class="small">{{ link.expira_em }}</td>
+              <td>
+                <form method="post" action="{{ url_for('admin_revogar_link', link_id=link.id) }}"
+                      onsubmit="return confirm('Revogar este link? Ele deixara de funcionar.')">
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Revogar</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">Nenhum link ativo.</p>
+      {% endif %}
+    </div>
+
+    <div class="admin-panel-card">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Historico recente</h2>
+      </div>
+      {% if historico %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>#</th><th>Recurso</th><th>Acao</th><th>Situacao</th><th>Enviada em</th><th>Avaliada em</th></tr></thead>
+          <tbody>
+            {% for s in historico %}
+            <tr>
+              <td>{{ s.id }}</td>
+              <td>{{ rotulo_recurso[s.recurso] }}</td>
+              <td>{{ 'Criar' if s.acao == 'criar' else 'Editar' }}</td>
+              <td>
+                <span class="badge {{ {'pendente': 'bg-warning text-dark', 'aprovada': 'bg-success', 'rejeitada': 'bg-danger'}[s.status] }}">{{ s.status }}</span>
+              </td>
+              <td class="small">{{ s.enviada_em }}</td>
+              <td class="small">{{ s.avaliada_em or '-' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">Nenhuma submissao registrada.</p>
+      {% endif %}
+    </div>
 
   </div>
 </section>

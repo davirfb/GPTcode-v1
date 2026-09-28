@@ -28,3 +28,6 @@ services:
         sync: false
       - key: ADMIN_ALLOWED_DOMAINS
         value: .ifb.edu.br
+      # Token para testar a API (Authorization: Bearer <API_TOKEN>). Vazio = so a sessao do painel.
+      - key: API_TOKEN
+        generateValue: true
