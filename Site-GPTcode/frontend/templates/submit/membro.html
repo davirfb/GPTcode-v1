@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% import '_campos.html' as c with context %}
+{% block title %}{{ 'Editar' if link.acao == 'editar' else 'Adicionar' }} Perfil | GPTCode{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">
+      {{ 'Editar Perfil' if link.acao == 'editar' else 'Adicionar Perfil' }}
+    </h1>
+    <p class="lead text-white-50">
+      Preencha os dados abaixo. A submissao sera revisada pela equipe antes de ser publicada.
+    </p>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container" style="max-width:760px;">
+    <div class="card shadow-sm border-0 p-4 p-md-5">
+      {% include 'submit/_aviso.html' %}
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {{ c.campos_membro(f, categorias, erros, admin=False) }}
+        <button type="submit" class="btn btn-warning w-100 fw-semibold mt-4">Enviar para revisao</button>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}

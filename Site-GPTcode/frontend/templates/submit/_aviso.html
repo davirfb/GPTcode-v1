@@ -1,0 +1,10 @@
+<p class="small text-muted mb-4">
+  <i class="bi bi-info-circle me-1"></i>
+  Este link e de uso unico e expira em {{ link.expira_em }} (UTC). Se houver algum erro nos dados,
+  o formulario indica o campo e o link continua valido ate o envio.
+</p>
+{% if erros and erros.get('_') %}
+<div class="alert alert-danger">{{ erros['_'] }}</div>
+{% elif erros %}
+<div class="alert alert-danger">Revise os campos destacados abaixo.</div>
+{% endif %}

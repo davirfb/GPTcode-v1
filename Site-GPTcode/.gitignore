@@ -19,3 +19,12 @@ backend/data/pending_submissions.json
 
 # Imagens enviadas pelo painel admin
 frontend/static/uploads/
+
+# Banco: backups e arquivos temporarios gerados pela migracao
+backend/data/*.bak
+backend/data/*.db.novo
+backend/data/*.db-wal
+backend/data/*.db-shm
+
+# Testes
+.pytest_cache/

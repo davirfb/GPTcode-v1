@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
 {% block title %}Projetos | GPTCode{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/projetos.css') }}" />
+{% endblock %}
 {% block content %}
 <header class="page-header d-flex align-items-center full-width-section fade-in">
   <div class="container text-center">
     <h1 class="display-4 text-white fw-bold fade-in-up stagger-1">
-      {{ projects.page.title }}
+      {{ cfg.projects_page_title }}
     </h1>
     <p class="lead text-white-50 fade-in-up stagger-2">
-      {{ projects.page.subtitle }}
+      {{ cfg.projects_page_subtitle }}
     </p>
   </div>
 </header>
@@ -16,24 +19,31 @@
   <div class="container">
     <section class="mb-5">
       <h2 class="section-title fade-in-down stagger-1">
-        {{ projects.page.section_title }}
+        {{ cfg.projects_section_title }}
       </h2>
       <div class="projects-grid">
-        {% for project in projects["items"] %}
+        {% for projeto in projetos %}
         <div class="project-card fade-in-up">
           <div class="card-header">
-            <span class="badge bg-accent">{{ project.badge }}</span>
+            <span class="badge bg-warning text-dark">{{ projeto.rotulo }}</span>
+            {% if projeto.status != 'em_andamento' %}
+            <span class="badge bg-secondary ms-1">{{ projeto.status_rotulo }}</span>
+            {% endif %}
           </div>
-          <h5 class="card-title">{{ project.title }}</h5>
+          <h5 class="card-title">{{ projeto.titulo }}</h5>
+          {% if projeto.participantes %}
           <p class="card-text text-muted small">
-            <strong>Estudantes:</strong> {{ project.students }}
+            <strong>Estudantes:</strong> {{ projeto.participantes | map(attribute='nome') | lista_nomes }}
           </p>
+          {% endif %}
+          {% if projeto.orientador %}
           <p class="card-text text-muted small">
-            <strong>Orientador:</strong> {{ project.advisor }}
+            <strong>Orientador:</strong> {{ projeto.orientador.nome }}
           </p>
-          {% if project.about_text %}
+          {% endif %}
+          {% if projeto.descricao %}
           <div class="project-card-actions">
-            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modal-{{ project.id }}">
+            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modal-projeto-{{ projeto.id }}">
               Sobre
             </button>
           </div>
@@ -45,23 +55,27 @@
   </div>
 </main>
 
-{% for project in projects["items"] %}
-{% if project.about_text %}
-<div class="modal fade" id="modal-{{ project.id }}" tabindex="-1" aria-labelledby="modal-label-{{ project.id }}" aria-hidden="true">
+{% for projeto in projetos %}
+{% if projeto.descricao %}
+<div class="modal fade" id="modal-projeto-{{ projeto.id }}" tabindex="-1" aria-labelledby="modal-label-{{ projeto.id }}" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-warning text-dark">{{ project.badge }}</span>
-          <h5 class="modal-title mb-0" id="modal-label-{{ project.id }}">{{ project.title }}</h5>
+          <span class="badge bg-warning text-dark">{{ projeto.rotulo }}</span>
+          <h5 class="modal-title mb-0" id="modal-label-{{ projeto.id }}">{{ projeto.titulo }}</h5>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-1"><strong>Estudantes:</strong> {{ project.students }}</p>
-        <p class="mb-3"><strong>Orientador:</strong> {{ project.advisor }}</p>
+        {% if projeto.participantes %}
+        <p class="mb-1"><strong>Estudantes:</strong> {{ projeto.participantes | map(attribute='nome') | lista_nomes }}</p>
+        {% endif %}
+        {% if projeto.orientador %}
+        <p class="mb-3"><strong>Orientador:</strong> {{ projeto.orientador.nome }}</p>
+        {% endif %}
         <hr />
-        <p style="white-space:pre-wrap;">{{ project.about_text }}</p>
+        <p style="white-space:pre-wrap;">{{ projeto.descricao }}</p>
       </div>
     </div>
   </div>

@@ -14,7 +14,8 @@ Site oficial do **GPTCode**, grupo de pesquisa multidisciplinar do Instituto Fed
 | Backend | Python 3.8+, Flask 2.0+, Jinja2 |
 | Autenticação | Firebase Authentication (Google OAuth) |
 | Frontend | HTML5, CSS3, JavaScript ES6+, Bootstrap 5.3 |
-| Armazenamento | JSON file-based (`backend/data/site_content.json`) |
+| Banco de dados | SQLite 3 (`backend/data/gptcode.db`, schema em `database/schema.sql`) |
+| API | REST JSON em `/api/v1` ([documentação](docs/API.md)) |
 | Deploy | Gunicorn + Render.com |
 
 ## Como iniciar
@@ -32,6 +33,8 @@ python backend/app.py
 # Acesse: http://localhost:5000
 ```
 
+Na primeira execução, o banco é criado (ou migrado da versão antiga) automaticamente.
+
 > Se você estiver na pasta raiz do workspace (fora de `Site-GPTcode/`), use `python run.py`.
 
 ## Configuração do .env
@@ -47,11 +50,34 @@ FIREBASE_APP_ID=...
 ADMIN_ALLOWED_EMAILS=email@exemplo.com
 ADMIN_ALLOWED_DOMAINS=.ifb.edu.br
 FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.sitegptcode.json
+API_TOKEN=um-token-longo-e-aleatorio   # opcional: habilita 'Authorization: Bearer' na API
 ```
 
 ## Painel Administrativo
 
 Acesse `/admin/login` e faça login com uma conta Google autorizada. O painel permite editar todo o conteúdo do site (projetos, publicações, equipe, home) sem tocar no código.
+
+## API REST
+
+Todo o conteúdo pode ser lido e editado por `/api/v1` (CRUD de categorias, membros, projetos, publicações,
+contatos, parceiros, slider, configurações, destaque, mensagens, links e submissões).
+
+- Documentação: [docs/API.md](docs/API.md)
+- Coleção do Postman: [docs/GPTcode-API.postman_collection.json](docs/GPTcode-API.postman_collection.json)
+- Modelo do banco e regras de negócio: [docs/BANCO_DE_DADOS.md](docs/BANCO_DE_DADOS.md)
+
+## Links de uso único
+
+No painel, o botão "Gerar link" cria um endereço que pode ser enviado a um aluno ou professor para cadastrar ou
+editar um membro, projeto ou publicação sem acessar o painel. O envio fica pendente até a aprovação em
+`/admin/pending`, que mostra lado a lado o valor atual e o valor enviado.
+
+## Testes
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
 
 ## Equipe
 

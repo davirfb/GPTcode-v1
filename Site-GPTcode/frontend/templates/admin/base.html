@@ -150,7 +150,7 @@
       window.adminFirebaseConfig = {{ firebase_config | tojson }};
       window.adminFirebaseState = {{ {
         "dashboardUrl": url_for("admin_dashboard"),
-        "loginUrl": url_for("admin_login"),
+        "loginUrl": url_for("admin_login", encerrar=1),
         "loginPage": request.endpoint == "admin_login",
         "protectedPage": request.endpoint != "admin_login"
       } | tojson }};

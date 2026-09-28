@@ -1,11 +1,12 @@
 {% extends 'admin/base.html' %}
+{% import '_campos.html' as c with context %}
 {% block title %}Projetos | GPTCode Admin{% endblock %}
 {% block content %}
 <header class="page-header d-flex align-items-center full-width-section">
   <div class="container text-center">
     <h1 class="display-4 text-white fw-bold">Edicao de Projetos</h1>
     <p class="lead text-white-50">
-      Mantenha a grade atual e atualize textos, imagens e links "Sobre".
+      Cadastre, edite ou remova projetos. Gere links para que alunos e orientadores enviem as informacoes.
     </p>
   </div>
 </header>
@@ -13,50 +14,33 @@
 <section class="py-5">
   <div class="container">
     <div class="d-flex flex-wrap gap-2 justify-content-end mb-4">
-      <form method="post" action="{{ url_for('admin_generate_project_add_link') }}">
-        <button type="submit" class="btn btn-outline-warning">
-          <i class="bi bi-link-45deg me-1"></i>Adicionar com link
-        </button>
-      </form>
+      {{ c.botao_link('projeto', 'criar', voltar=url_for('admin_projects'), rotulo='Gerar link para novo projeto', classe_botao='btn-outline-warning') }}
       <a href="#adicionar-projeto" class="btn btn-warning">Adicionar novo projeto</a>
     </div>
 
+    {% if not projetos %}
+    <div class="admin-item-card admin-item-card-dashed mb-4">
+      <p class="admin-help-text mb-0">Nenhum projeto cadastrado.</p>
+    </div>
+    {% endif %}
+
     <div class="row g-4 mb-4">
-      {% for project in projects["items"] %}
-      <div class="col-xl-6">
+      {% for projeto in projetos %}
+      <div class="col-xl-6" id="projeto-{{ projeto.id }}">
         <div class="admin-item-card h-100">
-          <form method="post" action="{{ url_for('admin_update_project', item_id=project.id) }}" class="admin-form mt-4">
-            <div class="admin-form-grid">
-              <div>
-                <label class="form-label">Badge</label>
-                <input class="form-control" name="badge" value="{{ project.badge }}" />
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Titulo do projeto</label>
-                <input class="form-control" name="title" value="{{ project.title }}" />
-              </div>
-              <div>
-                <label class="form-label">Estudantes</label>
-                <input class="form-control" name="students" value="{{ project.students }}" />
-              </div>
-              <div>
-                <label class="form-label">Orientador</label>
-                <input class="form-control" name="advisor" value="{{ project.advisor }}" />
-              </div>
-              <div class="admin-grid-span-2">
-                <label class="form-label">Texto do botao Sobre <span class="text-muted fw-normal">(opcional — ao preencher, exibe o botao no site)</span></label>
-                <textarea class="form-control" name="about_text" rows="4">{{ project.about_text }}</textarea>
-              </div>
-            </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <span class="badge bg-warning text-dark">{{ projeto.rotulo }}</span>
+            <span class="badge bg-secondary">{{ projeto.status_rotulo }}</span>
+            <small class="text-muted ms-auto">Atualizado em {{ projeto.atualizado_em }}</small>
+          </div>
+          <form method="post" action="{{ url_for('admin_update_project', item_id=projeto.id) }}" class="admin-form">
+            {{ c.campos_projeto(forms['projeto-' ~ projeto.id], membros) }}
             <button type="submit" class="btn btn-warning mt-4">Salvar projeto</button>
           </form>
-          <div class="d-flex gap-2 mt-2">
-            <form method="post" action="{{ url_for('admin_generate_project_edit_link', item_id=project.id) }}">
-              <button type="submit" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-link-45deg me-1"></i>Gerar link de edicao
-              </button>
-            </form>
-            <form method="post" action="{{ url_for('admin_delete_project', item_id=project.id) }}">
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            {{ c.botao_link('projeto', 'editar', projeto.id, url_for('admin_projects') ~ '#projeto-' ~ projeto.id) }}
+            <form method="post" action="{{ url_for('admin_delete_project', item_id=projeto.id) }}"
+                  onsubmit="return confirm('Remover este projeto? Publicacoes vinculadas perdem o vinculo.')">
               <button type="submit" class="btn btn-outline-danger btn-sm">Remover projeto</button>
             </form>
           </div>
@@ -69,29 +53,8 @@
       <div class="admin-panel-head">
         <h2 class="admin-panel-title">Adicionar novo projeto</h2>
       </div>
-      <form method="post" action="{{ url_for('admin_add_project') }}" enctype="multipart/form-data" class="admin-form">
-        <div class="admin-form-grid">
-          <div>
-            <label class="form-label">Badge</label>
-            <input class="form-control" name="badge" placeholder="Ex.: PTCC/TCC" />
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Titulo do projeto</label>
-            <input class="form-control" name="title" />
-          </div>
-          <div>
-            <label class="form-label">Estudantes</label>
-            <input class="form-control" name="students" />
-          </div>
-          <div>
-            <label class="form-label">Orientador</label>
-            <input class="form-control" name="advisor" />
-          </div>
-          <div class="admin-grid-span-2">
-            <label class="form-label">Texto do botao Sobre <span class="text-muted fw-normal">(opcional — ao preencher, exibe o botao no site)</span></label>
-            <textarea class="form-control" name="about_text" rows="4" placeholder="Descricao detalhada do projeto..."></textarea>
-          </div>
-        </div>
+      <form method="post" action="{{ url_for('admin_add_project') }}" class="admin-form">
+        {{ c.campos_projeto(forms['projeto-novo'], membros) }}
         <button type="submit" class="btn btn-warning mt-4">Adicionar projeto</button>
       </form>
     </div>

@@ -1,462 +1,280 @@
+"""Aplicacao Flask do site GPTcode: paginas publicas, painel e links de submissao.
+
+A API REST fica em backend/api.py e as regras de dados em backend/repositorio.py.
+"""
+
 from __future__ import annotations
 
-import json
 import os
-from functools import wraps
+import sys
+from datetime import timedelta
 from pathlib import Path
-from uuid import uuid4
+
+if __package__ in (None, ""):  # execucao direta: python backend/app.py
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
-from flask import (
-    Flask,
-    abort,
-    flash,
-    g,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
+from flask import Flask, abort, flash, g, jsonify, redirect, render_template, request, session, url_for
+from werkzeug.exceptions import HTTPException
+
+from backend import repositorio as repo
+from backend import validadores as v
+from backend.api import api, url_do_link
+from backend.auth import (
+    ADMIN_AUTH_COOKIE_NAME,
+    admin_required,
+    carregar_usuario,
+    encerrar_sessao,
+    get_admin_allowed_emails,
+    get_firebase_client_config,
+    get_firebase_setup_issues,
 )
-from werkzeug.utils import secure_filename
-
-try:
-    import firebase_admin
-    from firebase_admin import auth as firebase_auth, credentials
-except ImportError:  # pragma: no cover - package may be missing before setup
-    firebase_admin = None
-    firebase_auth = None
-    credentials = None
-
-try:
-    from .content_manager import load_site_content, save_site_content
-    from .database import add_mensagem, get_mensagens, count_nao_lidas, mark_mensagem_lida
-    from .token_manager import generate_token, validate_token, mark_token_used
-    from .pending_manager import (
-        add_pending,
-        get_pending_list,
-        get_pending_item,
-        mark_approved,
-        mark_rejected,
-        count_pending,
-    )
-    from .mailer import send_notification
-except ImportError:  # pragma: no cover - fallback for `python backend/app.py`
-    from content_manager import load_site_content, save_site_content
-    from database import add_mensagem, get_mensagens, count_nao_lidas, mark_mensagem_lida
-    from token_manager import generate_token, validate_token, mark_token_used
-    from pending_manager import (
-        add_pending,
-        get_pending_list,
-        get_pending_item,
-        mark_approved,
-        mark_rejected,
-        count_pending,
-    )
-    from mailer import send_notification
-
+from backend.contexto import fechar_db, get_db, usuario_id
+from backend.database import init_db
+from backend.erros import ErroDominio, ValidacaoErro
+from backend.mailer import send_notification
+from backend.uploads import apagar_imagem, salvar_imagem
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
-STATIC_DIR = FRONTEND_DIR / "static"
-UPLOADS_DIR = STATIC_DIR / "uploads"
-ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
-ADMIN_AUTH_COOKIE_NAME = "firebase_id_token"
-FIREBASE_CLIENT_REQUIRED_FIELDS = (
-    "apiKey",
-    "authDomain",
-    "projectId",
-    "messagingSenderId",
-    "appId",
-)
 
 app = Flask(
     __name__,
     static_folder=str(FRONTEND_DIR / "static"),
     template_folder=str(FRONTEND_DIR / "templates"),
 )
-app.config["ENV"] = "development"
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "gptcode-admin-dev-key")
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
-
-
-def admin_required(view_function):
-    @wraps(view_function)
-    def wrapped_view(*args, **kwargs):
-        if getattr(g, "admin_user", None):
-            return view_function(*args, **kwargs)
-
-        flash(
-            getattr(g, "admin_auth_error", None)
-            or "Faca login para acessar o painel administrativo.",
-            "warning",
-        )
-        response = redirect(url_for("admin_login"))
-        if request.cookies.get(ADMIN_AUTH_COOKIE_NAME):
-            response.delete_cookie(ADMIN_AUTH_COOKIE_NAME, path="/")
-        return response
-
-    return wrapped_view
-
-
-def resolve_env_path(variable_name: str) -> Path | None:
-    raw_path = (os.getenv(variable_name) or "").strip()
-    if not raw_path:
-        return None
-
-    candidate = Path(raw_path)
-    if not candidate.is_absolute():
-        candidate = BASE_DIR / candidate
-    return candidate.resolve()
-
-
-def get_firebase_client_config() -> dict[str, str]:
-    return {
-        "apiKey": os.getenv("FIREBASE_API_KEY", "").strip(),
-        "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN", "").strip(),
-        "projectId": os.getenv("FIREBASE_PROJECT_ID", "").strip(),
-        "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET", "").strip(),
-        "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID", "").strip(),
-        "appId": os.getenv("FIREBASE_APP_ID", "").strip(),
-        "measurementId": os.getenv("FIREBASE_MEASUREMENT_ID", "").strip(),
-    }
-
-
-def is_firebase_client_configured() -> bool:
-    config = get_firebase_client_config()
-    return all(config.get(field) for field in FIREBASE_CLIENT_REQUIRED_FIELDS)
-
-
-def get_firebase_service_account_path() -> Path | None:
-    return resolve_env_path("FIREBASE_SERVICE_ACCOUNT_PATH") or resolve_env_path(
-        "GOOGLE_APPLICATION_CREDENTIALS"
-    )
-
-
-def get_admin_allowed_emails() -> set[str]:
-    raw_value = os.getenv("ADMIN_ALLOWED_EMAILS", "")
-    return {item.strip().lower() for item in raw_value.split(",") if item.strip()}
-
-
-def get_admin_allowed_domains() -> set[str]:
-    raw_value = os.getenv("ADMIN_ALLOWED_DOMAINS", "")
-    return {item.strip().lower() for item in raw_value.split(",") if item.strip()}
-
-
-def has_admin_access_rules() -> bool:
-    return bool(get_admin_allowed_emails() or get_admin_allowed_domains())
-
-
-def is_admin_email_allowed(email: str) -> bool:
-    normalized_email = email.strip().lower()
-    if not normalized_email:
-        return False
-
-    allowed_emails = get_admin_allowed_emails()
-    if normalized_email in allowed_emails:
-        return True
-
-    if "@" not in normalized_email:
-        return False
-
-    domain = normalized_email.rsplit("@", 1)[1]
-    return domain in get_admin_allowed_domains()
-
-
-def get_firebase_service_account_dict() -> dict | None:
-    raw = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
-    if raw:
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            return None
-    return None
-
-
-def get_firebase_setup_issues() -> list[str]:
-    issues = []
-
-    if firebase_admin is None or firebase_auth is None or credentials is None:
-        issues.append("Instale a dependencia Python `firebase-admin` no ambiente.")
-
-    if not is_firebase_client_configured():
-        issues.append("Configure as variaveis `FIREBASE_*` do app web no servidor.")
-
-    has_creds = (
-        get_firebase_service_account_path() is not None
-        or get_firebase_service_account_dict() is not None
-    )
-    if not has_creds:
-        issues.append(
-            "Defina `FIREBASE_SERVICE_ACCOUNT_JSON` (conteudo JSON) ou "
-            "`FIREBASE_SERVICE_ACCOUNT_PATH` (caminho do arquivo) para o Firebase Admin SDK."
-        )
-
-    if not has_admin_access_rules():
-        issues.append(
-            "Defina `ADMIN_ALLOWED_EMAILS` ou `ADMIN_ALLOWED_DOMAINS` para limitar o acesso ao admin."
-        )
-
-    return issues
-
-
-def ensure_firebase_admin_app():
-    if firebase_admin is None or firebase_auth is None or credentials is None:
-        raise RuntimeError("O suporte ao Firebase nao esta instalado no servidor.")
-
-    try:
-        return firebase_admin.get_app()
-    except ValueError:
-        client_config = get_firebase_client_config()
-        options = {}
-        if client_config.get("projectId"):
-            options["projectId"] = client_config["projectId"]
-
-        service_account_dict = get_firebase_service_account_dict()
-        if service_account_dict:
-            return firebase_admin.initialize_app(
-                credentials.Certificate(service_account_dict),
-                options=options or None,
-            )
-
-        credential_path = get_firebase_service_account_path()
-        if credential_path:
-            if not credential_path.exists():
-                raise FileNotFoundError(
-                    f"Arquivo de credencial do Firebase nao encontrado em: {credential_path}"
-                )
-
-            return firebase_admin.initialize_app(
-                credentials.Certificate(str(credential_path)),
-                options=options or None,
-            )
-
-        return firebase_admin.initialize_app(options=options or None)
-
-
-def clean_text(value: str | None) -> str:
-    return (value or "").strip()
-
-
-def get_admin_user_from_id_token(id_token: str) -> dict:
-    ensure_firebase_admin_app()
-    decoded_token = firebase_auth.verify_id_token(id_token)
-
-    email = clean_text(decoded_token.get("email")).lower()
-    if not email:
-        raise PermissionError("A conta autenticada nao possui email disponivel.")
-
-    if not is_admin_email_allowed(email):
-        raise PermissionError(
-            "Esta conta nao esta autorizada para acessar o painel administrativo."
-        )
-
-    return {
-        "email": email,
-        "name": clean_text(decoded_token.get("name")) or email,
-        "uid": decoded_token.get("uid", ""),
-    }
-
-
-def parse_tags(value: str | None) -> list[str]:
-    return [item.strip() for item in (value or "").split(",") if item.strip()]
-
-
-def is_allowed_image(filename: str) -> bool:
-    return Path(filename).suffix.lower() in ALLOWED_IMAGE_EXTENSIONS
-
-
-def save_uploaded_image(file_storage, folder_name: str) -> str:
-    if not file_storage or not file_storage.filename:
-        return ""
-
-    filename = secure_filename(file_storage.filename)
-    if not filename or not is_allowed_image(filename):
-        raise ValueError("Formato de imagem invalido. Use PNG, JPG, JPEG, GIF ou WEBP.")
-
-    target_dir = UPLOADS_DIR / folder_name
-    target_dir.mkdir(parents=True, exist_ok=True)
-
-    new_filename = f"{uuid4().hex}{Path(filename).suffix.lower()}"
-    file_path = target_dir / new_filename
-    file_storage.save(file_path)
-    return f"uploads/{folder_name}/{new_filename}"
-
-
-def delete_managed_image(image_path: str | None) -> None:
-    if not image_path or not image_path.startswith("uploads/"):
-        return
-
-    file_path = (STATIC_DIR / image_path).resolve()
-    static_dir = STATIC_DIR.resolve()
-    if static_dir not in file_path.parents:
-        return
-    if file_path.exists():
-        file_path.unlink()
-
-
-def find_item(items: list[dict], item_id: str) -> dict | None:
-    for item in items:
-        if item.get("id") == item_id:
-            return item
-    return None
-
-
-def build_team_sections(team_content: dict) -> list[dict]:
-    members = team_content.get("members", [])
-    sections = []
-    for category in team_content.get("categories", []):
-        category_members = [
-            member for member in members if member.get("category") == category.get("id")
-        ]
-        sections.append(
-            {
-                "id": category.get("id"),
-                "title": category.get("title"),
-                "empty_message": category.get("empty_message"),
-                "members": category_members,
-            }
-        )
-    return sections
-
-
-def build_admin_team_sections(team_content: dict) -> list[dict]:
-    valid_category_ids = {cat["id"] for cat in team_content.get("categories", [])}
-    members = team_content.get("members", [])
-    sections = []
-    for category in team_content.get("categories", []):
-        category_members = [m for m in members if m.get("category") == category["id"]]
-        sections.append(
-            {
-                "id": category["id"],
-                "title": category["title"],
-                "members": category_members,
-            }
-        )
-    orphaned = [m for m in members if m.get("category", "") not in valid_category_ids]
-    if orphaned:
-        sections.append(
-            {
-                "id": "_sem_categoria",
-                "title": "Sem categoria (ocultos no site)",
-                "members": orphaned,
-            }
-        )
-    return sections
-
-
-def get_dashboard_stats(content: dict) -> dict:
-    return {
-        "slider_images": len(content["home"]["about"]["slider"]),
-        "partners": len(content["home"]["partners"]),
-        "projects": len(content["projects"]["items"]),
-        "publications": len(content["publications"]["items"]),
-        "team_members": len(content["team"]["members"]),
-    }
-
-
-@app.before_request
-def load_admin_auth_state() -> None:
-    g.admin_user = None
-    g.admin_auth_error = None
-
-    if not request.path.startswith("/admin"):
-        return
-
-    id_token = clean_text(request.cookies.get(ADMIN_AUTH_COOKIE_NAME))
-    if not id_token:
-        return
-
-    try:
-        g.admin_user = get_admin_user_from_id_token(id_token)
-    except PermissionError as exc:
-        g.admin_auth_error = str(exc)
-    except (FileNotFoundError, RuntimeError) as exc:
-        g.admin_auth_error = str(exc)
-    except Exception:
-        g.admin_auth_error = "Nao foi possivel validar o acesso pelo Firebase."
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
+app.json.sort_keys = False
+app.json.ensure_ascii = False
+
+app.register_blueprint(api)
+app.before_request(carregar_usuario)
+app.teardown_appcontext(fechar_db)
+
+for aviso in init_db():
+    app.logger.warning("migracao do banco: %s", aviso)
+
+
+# ---------------------------------------------------------------------------
+# Filtros e contexto dos templates
+# ---------------------------------------------------------------------------
+
+@app.template_filter("lista_nomes")
+def lista_nomes(nomes) -> str:
+    """['A', 'B', 'C'] -> 'A, B e C'."""
+    nomes = [n for n in nomes if n]
+    if len(nomes) <= 1:
+        return "".join(nomes)
+    return f"{', '.join(nomes[:-1])} e {nomes[-1]}"
 
 
 @app.context_processor
-def inject_admin_state():
-    firebase_setup_issues = get_firebase_setup_issues()
-    return {
+def contexto_templates():
+    contexto = {
         "admin_logged_in": bool(getattr(g, "admin_user", None)),
-        "firebase_config": get_firebase_client_config(),
-        "firebase_ready": not firebase_setup_issues,
-        "firebase_setup_issues": firebase_setup_issues,
-        "pending_count": count_pending(),
-        "unread_messages_count": count_nao_lidas(),
+        "rotulos": {
+            "modalidades": v.MODALIDADE_ROTULO,
+            "status_projeto": v.STATUS_PROJETO_ROTULO,
+            "tipos_publicacao": v.TIPO_PUBLICACAO_ROTULO,
+            "tipos_contato": v.TIPO_CONTATO_ROTULO,
+            "papeis": v.PAPEIS_PARTICIPANTE,
+        },
     }
+    if request.path.startswith("/admin"):
+        issues = get_firebase_setup_issues()
+        contexto.update(
+            firebase_config=get_firebase_client_config(),
+            firebase_ready=not issues,
+            firebase_setup_issues=issues,
+            pending_count=repo.contar_submissoes_pendentes(get_db()) if contexto["admin_logged_in"] else 0,
+            unread_messages_count=repo.contar_mensagens_nao_lidas(get_db()) if contexto["admin_logged_in"] else 0,
+        )
+    return contexto
 
 
-def resolve_highlight(content: dict) -> dict | None:
-    ref = content["home"].get("highlight", {})
-    item_type = ref.get("type", "none")
-    item_id = ref.get("item_id", "")
-    if item_type == "publication" and item_id:
-        item = find_item(content["publications"]["items"], item_id)
-        if item:
-            return {"type": "publication", "item": item}
-    elif item_type == "project" and item_id:
-        item = find_item(content["projects"]["items"], item_id)
-        if item:
-            return {"type": "project", "item": item}
-    return None
+@app.errorhandler(HTTPException)
+def erro_http(exc: HTTPException):
+    if request.path.startswith("/api/"):
+        return jsonify({"erro": exc.description or exc.name}), exc.code
+    return exc
 
+
+# ---------------------------------------------------------------------------
+# Paginas publicas
+# ---------------------------------------------------------------------------
 
 @app.route("/")
 def index():
-    content = load_site_content()
-    return render_template("index.html", home=content["home"], highlight=resolve_highlight(content))
+    db = get_db()
+    return render_template(
+        "index.html",
+        cfg=repo.obter_configuracoes(db),
+        slider=repo.listar_slider(db),
+        parceiros=repo.listar_parceiros(db),
+        destaque=repo.obter_destaque(db),
+    )
 
 
 @app.route("/contato", methods=["GET", "POST"])
 def contato():
-    content = load_site_content()
+    db = get_db()
+    enviado = {}
+    erros = {}
     if request.method == "POST":
-        nome = request.form.get("nome", "").strip()
-        email = request.form.get("email", "").strip()
-        mensagem = request.form.get("mensagem", "").strip()
-        if nome and email and mensagem:
-            add_mensagem(nome, email, mensagem)
-            flash("Mensagem enviada com sucesso!", "success")
+        enviado = {
+            "nome_remetente": request.form.get("nome"),
+            "email_remetente": request.form.get("email"),
+            "assunto": request.form.get("assunto"),
+            "mensagem": request.form.get("mensagem"),
+        }
+        try:
+            repo.criar_mensagem(db, enviado)
+        except ValidacaoErro as exc:
+            erros = exc.campos
+            flash("Revise os campos destacados.", "danger")
         else:
-            flash("Preencha todos os campos.", "danger")
-        return redirect(url_for("contato"))
-    return render_template("contato.html", contact=content["contact"])
+            flash("Mensagem enviada com sucesso!", "success")
+            return redirect(url_for("contato"))
+    return render_template(
+        "contato.html",
+        contatos=repo.listar_contatos(db),
+        enviado=enviado,
+        erros=erros,
+    ), (422 if erros else 200)
 
 
 @app.route("/equipe")
 def equipe():
-    content = load_site_content()
-    team_content = content["team"]
-    return render_template(
-        "equipe.html",
-        team=team_content,
-        team_sections=build_team_sections(team_content),
-    )
+    db = get_db()
+    membros = repo.listar_membros(db, apenas_ativos=True)
+    secoes = [
+        {**categoria, "membros": [m for m in membros if m["categoria_id"] == categoria["id"]]}
+        for categoria in repo.listar_categorias(db)
+    ]
+    return render_template("equipe.html", cfg=repo.obter_configuracoes(db), secoes=secoes, total=len(membros))
 
 
 @app.route("/publicacoes")
 def publicacoes():
-    content = load_site_content()
-    return render_template("publicacoes.html", publications=content["publications"])
+    db = get_db()
+    return render_template("publicacoes.html", cfg=repo.obter_configuracoes(db), publicacoes=repo.listar_publicacoes(db))
 
 
 @app.route("/projetos")
 def projetos():
-    content = load_site_content()
-    return render_template("projetos.html", projects=content["projects"])
+    db = get_db()
+    return render_template("projetos.html", cfg=repo.obter_configuracoes(db), projetos=repo.listar_projetos(db))
 
+
+# ---------------------------------------------------------------------------
+# Formularios: conversao registro <-> campos do formulario
+# ---------------------------------------------------------------------------
+
+def _sem_nulos(dados: dict) -> dict:
+    return {chave: ("" if valor is None else valor) for chave, valor in dados.items()}
+
+
+def form_membro(membro: dict | None) -> dict:
+    if not membro:
+        return {"ativo": True}
+    return _sem_nulos(
+        {
+            "categoria_id": membro["categoria_id"],
+            "nome": membro["nome"],
+            "funcao": membro["funcao"],
+            "email": membro["email"],
+            "github_url": membro["github_url"],
+            "lattes_url": membro["lattes_url"],
+            "descricao": membro["descricao"],
+            "tags": ", ".join(membro["tags"]),
+            "ativo": membro["ativo"],
+        }
+    )
+
+
+def form_projeto(projeto: dict | None) -> dict:
+    if not projeto:
+        return {"status": "em_andamento"}
+    linhas = [p["nome"] if p["papel"] == "estudante" else f"{p['nome']} ({p['papel']})" for p in projeto["participantes"]]
+    return _sem_nulos(
+        {
+            "titulo": projeto["titulo"],
+            "modalidade": projeto["modalidade"],
+            "status": projeto["status"],
+            "ano_inicio": projeto["ano_inicio"],
+            "ano_fim": projeto["ano_fim"],
+            "orientador_id": projeto["orientador_id"],
+            "participantes": "\n".join(linhas),
+            "descricao": projeto["descricao"],
+        }
+    )
+
+
+def form_publicacao(publicacao: dict | None) -> dict:
+    if not publicacao:
+        return {"tipo": "artigo"}
+    return _sem_nulos(
+        {
+            "titulo": publicacao["titulo"],
+            "ano": publicacao["ano"],
+            "tipo": publicacao["tipo"],
+            "veiculo": publicacao["veiculo"],
+            "autores": "\n".join(a["nome_citacao"] for a in publicacao["autores"]),
+            "doi": publicacao["doi"],
+            "url": publicacao["url"],
+            "projeto_id": publicacao["projeto_id"],
+        }
+    )
+
+
+def form_contato(contato_item: dict | None) -> dict:
+    if not contato_item:
+        return {"tipo": "email"}
+    return _sem_nulos({c: contato_item[c] for c in ("tipo", "titulo", "valor", "subtitulo", "link", "icone")})
+
+
+def _rascunho() -> dict:
+    dados = request.form.to_dict()
+    dados["ativo"] = "ativo" in request.form
+    return dados
+
+
+def _forms(itens: list[dict], prefixo: str, conversor, rascunhos: dict | None) -> dict:
+    forms = {f"{prefixo}-{item['id']}": conversor(item) for item in itens}
+    forms[f"{prefixo}-novo"] = conversor(None)
+    forms.update(rascunhos or {})
+    return forms
+
+
+def _salvar(chave: str, pagina, destino: str, acao, sucesso: str):
+    """Executa a acao; em erro, reapresenta a pagina com o que foi digitado."""
+    try:
+        acao()
+    except ErroDominio as exc:
+        for mensagem in exc.mensagens():
+            flash(mensagem, "danger")
+        return pagina({chave: _rascunho()}), exc.status_http
+    flash(sucesso, "success")
+    return redirect(destino)
+
+
+# ---------------------------------------------------------------------------
+# Painel: login, dashboard e configuracoes gerais
+# ---------------------------------------------------------------------------
 
 @app.route("/admin/login")
 def admin_login():
-    if getattr(g, "admin_user", None):
+    if request.args.get("encerrar"):
+        encerrar_sessao()
+        g.admin_user = None
+    elif getattr(g, "admin_user", None):
         return redirect(url_for("admin_dashboard"))
-
     return render_template("admin/login.html")
 
 
@@ -472,871 +290,455 @@ def admin_logout():
 @app.route("/admin")
 @admin_required
 def admin_dashboard():
-    content = load_site_content()
+    db = get_db()
     return render_template(
         "admin/dashboard.html",
-        stats=get_dashboard_stats(content),
-        home=content["home"],
-        projects=content["projects"],
-        publications=content["publications"],
-        team=content["team"],
-        contact=content["contact"],
+        stats=repo.estatisticas(db),
+        cfg=repo.obter_configuracoes(db),
+    )
+
+
+@app.route("/admin/configuracoes", methods=["POST"])
+@admin_required
+def admin_update_settings():
+    dados = {chave: valor for chave, valor in request.form.items() if chave in v.CHAVES_CONFIGURACAO}
+    return _salvar(
+        "configuracoes",
+        pagina_admin_home,
+        _voltar(url_for("admin_home")),
+        lambda: repo.atualizar_configuracoes(get_db(), dados, usuario_id()),
+        "Textos atualizados.",
+    )
+
+
+def _voltar(padrao: str) -> str:
+    destino = request.form.get("voltar") or ""
+    return destino if destino.startswith("/admin") else padrao
+
+
+# ---------------------------------------------------------------------------
+# Painel: pagina inicial (slider, destaque, parceiros)
+# ---------------------------------------------------------------------------
+
+def pagina_admin_home(rascunhos: dict | None = None):
+    db = get_db()
+    cfg = repo.obter_configuracoes(db)
+    if rascunhos and "configuracoes" in rascunhos:
+        cfg.update({k: val for k, val in rascunhos["configuracoes"].items() if k in cfg})
+    return render_template(
+        "admin/home.html",
+        cfg=cfg,
+        slider=repo.listar_slider(db),
+        parceiros=repo.listar_parceiros(db),
+        destaque=repo.obter_destaque(db),
+        projetos=repo.listar_projetos(db),
+        publicacoes=repo.listar_publicacoes(db),
     )
 
 
 @app.route("/admin/home")
 @admin_required
 def admin_home():
-    content = load_site_content()
-    return render_template(
-        "admin/home.html",
-        home=content["home"],
-        projects=content["projects"],
-        publications=content["publications"],
-    )
-
-
-@app.route("/admin/home/settings", methods=["POST"])
-@admin_required
-def admin_update_home_settings():
-    content = load_site_content()
-    home = content["home"]
-
-    home["hero"]["title"] = clean_text(request.form.get("hero_title"))
-    home["hero"]["subtitle"] = clean_text(request.form.get("hero_subtitle"))
-
-    home["about"]["title"] = clean_text(request.form.get("about_title"))
-    home["about"]["lead"] = clean_text(request.form.get("about_lead"))
-    home["about"]["description"] = clean_text(request.form.get("about_description"))
-    home["about"]["primary_button_text"] = clean_text(
-        request.form.get("primary_button_text")
-    )
-    home["about"]["primary_button_link"] = clean_text(
-        request.form.get("primary_button_link")
-    )
-    home["about"]["secondary_button_text"] = clean_text(
-        request.form.get("secondary_button_text")
-    )
-    home["about"]["secondary_button_link"] = clean_text(
-        request.form.get("secondary_button_link")
-    )
-    home["partners_title"] = clean_text(request.form.get("partners_title"))
-
-    save_site_content(content)
-    flash("Textos da pagina inicial atualizados.", "success")
-    return redirect(url_for("admin_home"))
+    return pagina_admin_home()
 
 
 @app.route("/admin/home/highlight", methods=["POST"])
 @admin_required
 def admin_update_highlight():
-    content = load_site_content()
-    selection = clean_text(request.form.get("highlight_selection", "none")) or "none"
+    selecao = request.form.get("highlight_selection", "nenhum")
+    tipo, _, item_id = selecao.partition(":")
+    return _salvar(
+        "destaque",
+        pagina_admin_home,
+        url_for("admin_home"),
+        lambda: repo.definir_destaque(get_db(), {"tipo": tipo, "item_id": item_id or None}),
+        "Destaque principal atualizado.",
+    )
 
-    if ":" in selection:
-        item_type, item_id = selection.split(":", 1)
-        if item_type in ("project", "publication"):
-            content["home"]["highlight"] = {"type": item_type, "item_id": item_id}
-        else:
-            content["home"]["highlight"] = {"type": "none", "item_id": ""}
-    else:
-        content["home"]["highlight"] = {"type": "none", "item_id": ""}
 
-    save_site_content(content)
-    flash("Destaque principal atualizado.", "success")
-    return redirect(url_for("admin_home"))
+def _com_imagem(campo: str, pasta: str, acao, obrigatoria: bool):
+    """Salva o upload, executa a acao e desfaz o arquivo se a acao falhar."""
+    def executar():
+        imagem = salvar_imagem(request.files.get(campo), pasta, campo)
+        if obrigatoria and not imagem:
+            raise ValidacaoErro({campo: "Selecione uma imagem."})
+        try:
+            antiga = acao(imagem)
+        except ErroDominio:
+            apagar_imagem(imagem)
+            raise
+        apagar_imagem(antiga)
+    return executar
 
 
 @app.route("/admin/home/slider/add", methods=["POST"])
 @admin_required
 def admin_add_slider_image():
-    content = load_site_content()
-    image_file = request.files.get("image")
-
-    try:
-        image_path = save_uploaded_image(image_file, "about-slider")
-    except ValueError as error:
-        flash(str(error), "danger")
-        return redirect(url_for("admin_home"))
-
-    if not image_path:
-        flash("Selecione uma imagem para adicionar ao slider.", "danger")
-        return redirect(url_for("admin_home"))
-
-    content["home"]["about"]["slider"].append(
-        {
-            "id": f"about-slide-{uuid4().hex}",
-            "image": image_path,
-            "alt": clean_text(request.form.get("alt")) or "Imagem do slider",
-        }
+    dados = request.form.to_dict()
+    return _salvar(
+        "slide-novo",
+        pagina_admin_home,
+        url_for("admin_home") + "#slider",
+        _com_imagem("imagem", "about-slider", lambda img: repo.criar_slider(get_db(), dados, img) and None, True),
+        "Imagem adicionada ao slider.",
     )
-    save_site_content(content)
-    flash("Imagem adicionada ao slider.", "success")
-    return redirect(url_for("admin_home"))
 
 
-@app.route("/admin/home/slider/<item_id>/update", methods=["POST"])
+@app.route("/admin/home/slider/<int:item_id>/update", methods=["POST"])
 @admin_required
-def admin_update_slider_image(item_id: str):
-    content = load_site_content()
-    item = find_item(content["home"]["about"]["slider"], item_id)
-    if not item:
-        flash("Imagem do slider nao encontrada.", "danger")
-        return redirect(url_for("admin_home"))
-
-    item["alt"] = clean_text(request.form.get("alt"))
-
-    image_file = request.files.get("image")
-    try:
-        new_image = save_uploaded_image(image_file, "about-slider")
-    except ValueError as error:
-        flash(str(error), "danger")
-        return redirect(url_for("admin_home"))
-
-    if new_image:
-        delete_managed_image(item.get("image"))
-        item["image"] = new_image
-
-    save_site_content(content)
-    flash("Imagem do slider atualizada.", "success")
-    return redirect(url_for("admin_home"))
+def admin_update_slider_image(item_id: int):
+    dados = request.form.to_dict()
+    return _salvar(
+        f"slide-{item_id}",
+        pagina_admin_home,
+        url_for("admin_home") + "#slider",
+        _com_imagem("imagem", "about-slider",
+                    lambda img: repo.atualizar_slider(get_db(), item_id, dados, img)[1], False),
+        "Imagem do slider atualizada.",
+    )
 
 
-@app.route("/admin/home/slider/<item_id>/delete", methods=["POST"])
+@app.route("/admin/home/slider/<int:item_id>/delete", methods=["POST"])
 @admin_required
-def admin_delete_slider_image(item_id: str):
-    content = load_site_content()
-    slider_items = content["home"]["about"]["slider"]
-    item = find_item(slider_items, item_id)
-    if not item:
-        flash("Imagem do slider nao encontrada.", "danger")
-        return redirect(url_for("admin_home"))
-
-    slider_items.remove(item)
-    delete_managed_image(item.get("image"))
-    save_site_content(content)
-    flash("Imagem removida do slider.", "success")
-    return redirect(url_for("admin_home"))
+def admin_delete_slider_image(item_id: int):
+    return _salvar(
+        f"slide-{item_id}",
+        pagina_admin_home,
+        url_for("admin_home") + "#slider",
+        lambda: apagar_imagem(repo.remover_slider(get_db(), item_id)["imagem"]),
+        "Imagem removida do slider.",
+    )
 
 
 @app.route("/admin/home/partners/add", methods=["POST"])
 @admin_required
 def admin_add_partner():
-    content = load_site_content()
-    image_file = request.files.get("image")
-
-    try:
-        image_path = save_uploaded_image(image_file, "partners")
-    except ValueError as error:
-        flash(str(error), "danger")
-        return redirect(url_for("admin_home"))
-
-    if not image_path:
-        flash("Selecione a imagem do parceiro ou apoiador.", "danger")
-        return redirect(url_for("admin_home"))
-
-    content["home"]["partners"].append(
-        {
-            "id": f"partner-{uuid4().hex}",
-            "name": clean_text(request.form.get("name")),
-            "link": clean_text(request.form.get("link")),
-            "image": image_path,
-        }
+    dados = request.form.to_dict()
+    return _salvar(
+        "parceiro-novo",
+        pagina_admin_home,
+        url_for("admin_home") + "#parceiros",
+        _com_imagem("logo", "partners", lambda img: repo.criar_parceiro(get_db(), dados, img) and None, True),
+        "Parceiro ou apoiador adicionado.",
     )
-    save_site_content(content)
-    flash("Parceiro ou apoiador adicionado.", "success")
-    return redirect(url_for("admin_home"))
 
 
-@app.route("/admin/home/partners/<item_id>/update", methods=["POST"])
+@app.route("/admin/home/partners/<int:item_id>/update", methods=["POST"])
 @admin_required
-def admin_update_partner(item_id: str):
-    content = load_site_content()
-    partner = find_item(content["home"]["partners"], item_id)
-    if not partner:
-        flash("Parceiro nao encontrado.", "danger")
-        return redirect(url_for("admin_home"))
-
-    partner["name"] = clean_text(request.form.get("name"))
-    partner["link"] = clean_text(request.form.get("link"))
-
-    image_file = request.files.get("image")
-    try:
-        new_image = save_uploaded_image(image_file, "partners")
-    except ValueError as error:
-        flash(str(error), "danger")
-        return redirect(url_for("admin_home"))
-
-    if new_image:
-        delete_managed_image(partner.get("image"))
-        partner["image"] = new_image
-
-    save_site_content(content)
-    flash("Parceiro atualizado.", "success")
-    return redirect(url_for("admin_home"))
+def admin_update_partner(item_id: int):
+    dados = request.form.to_dict()
+    return _salvar(
+        f"parceiro-{item_id}",
+        pagina_admin_home,
+        url_for("admin_home") + "#parceiros",
+        _com_imagem("logo", "partners", lambda img: repo.atualizar_parceiro(get_db(), item_id, dados, img)[1], False),
+        "Parceiro atualizado.",
+    )
 
 
-@app.route("/admin/home/partners/<item_id>/delete", methods=["POST"])
+@app.route("/admin/home/partners/<int:item_id>/delete", methods=["POST"])
 @admin_required
-def admin_delete_partner(item_id: str):
-    content = load_site_content()
-    partners = content["home"]["partners"]
-    partner = find_item(partners, item_id)
-    if not partner:
-        flash("Parceiro nao encontrado.", "danger")
-        return redirect(url_for("admin_home"))
+def admin_delete_partner(item_id: int):
+    return _salvar(
+        f"parceiro-{item_id}",
+        pagina_admin_home,
+        url_for("admin_home") + "#parceiros",
+        lambda: apagar_imagem(repo.remover_parceiro(get_db(), item_id)["logo"]),
+        "Parceiro removido.",
+    )
 
-    partners.remove(partner)
-    delete_managed_image(partner.get("image"))
-    save_site_content(content)
-    flash("Parceiro removido.", "success")
-    return redirect(url_for("admin_home"))
+
+# ---------------------------------------------------------------------------
+# Painel: projetos
+# ---------------------------------------------------------------------------
+
+def pagina_admin_projetos(rascunhos: dict | None = None):
+    db = get_db()
+    projetos_lista = repo.listar_projetos(db)
+    return render_template(
+        "admin/projects.html",
+        projetos=projetos_lista,
+        forms=_forms(projetos_lista, "projeto", form_projeto, rascunhos),
+        membros=repo.listar_membros(db),
+    )
 
 
 @app.route("/admin/projects")
 @admin_required
 def admin_projects():
-    content = load_site_content()
-    return render_template("admin/projects.html", projects=content["projects"])
-
-
-@app.route("/admin/projects/settings", methods=["POST"])
-@admin_required
-def admin_update_projects_settings():
-    content = load_site_content()
-    page = content["projects"]["page"]
-    page["title"] = clean_text(request.form.get("title"))
-    page["subtitle"] = clean_text(request.form.get("subtitle"))
-    page["section_title"] = clean_text(request.form.get("section_title"))
-    save_site_content(content)
-    flash("Cabecalho da pagina de projetos atualizado.", "success")
-    return redirect(url_for("admin_projects"))
+    return pagina_admin_projetos()
 
 
 @app.route("/admin/projects/add", methods=["POST"])
 @admin_required
 def admin_add_project():
-    content = load_site_content()
-    content["projects"]["items"].append(
-        {
-            "id": f"project-{uuid4().hex}",
-            "badge": clean_text(request.form.get("badge")),
-            "title": clean_text(request.form.get("title")),
-            "students": clean_text(request.form.get("students")),
-            "advisor": clean_text(request.form.get("advisor")),
-            "image": "",
-            "about_text": clean_text(request.form.get("about_text")),
-        }
+    return _salvar(
+        "projeto-novo",
+        pagina_admin_projetos,
+        url_for("admin_projects"),
+        lambda: repo.criar_projeto(get_db(), request.form.to_dict(), usuario_id()),
+        "Projeto adicionado com sucesso.",
     )
-    save_site_content(content)
-    flash("Projeto adicionado com sucesso.", "success")
-    return redirect(url_for("admin_projects"))
 
 
-@app.route("/admin/projects/<item_id>/update", methods=["POST"])
+@app.route("/admin/projects/<int:item_id>/update", methods=["POST"])
 @admin_required
-def admin_update_project(item_id: str):
-    content = load_site_content()
-    project = find_item(content["projects"]["items"], item_id)
-    if not project:
-        flash("Projeto nao encontrado.", "danger")
-        return redirect(url_for("admin_projects"))
-
-    project["badge"] = clean_text(request.form.get("badge"))
-    project["title"] = clean_text(request.form.get("title"))
-    project["students"] = clean_text(request.form.get("students"))
-    project["advisor"] = clean_text(request.form.get("advisor"))
-    project["about_text"] = clean_text(request.form.get("about_text"))
-
-    save_site_content(content)
-    flash("Projeto atualizado.", "success")
-    return redirect(url_for("admin_projects"))
+def admin_update_project(item_id: int):
+    return _salvar(
+        f"projeto-{item_id}",
+        pagina_admin_projetos,
+        url_for("admin_projects") + f"#projeto-{item_id}",
+        lambda: repo.atualizar_projeto(get_db(), item_id, request.form.to_dict(), usuario_id()),
+        "Projeto atualizado.",
+    )
 
 
-@app.route("/admin/projects/<item_id>/delete", methods=["POST"])
+@app.route("/admin/projects/<int:item_id>/delete", methods=["POST"])
 @admin_required
-def admin_delete_project(item_id: str):
-    content = load_site_content()
-    projects = content["projects"]["items"]
-    project = find_item(projects, item_id)
-    if not project:
-        flash("Projeto nao encontrado.", "danger")
-        return redirect(url_for("admin_projects"))
+def admin_delete_project(item_id: int):
+    return _salvar(
+        f"projeto-{item_id}",
+        pagina_admin_projetos,
+        url_for("admin_projects"),
+        lambda: repo.remover_projeto(get_db(), item_id),
+        "Projeto removido.",
+    )
 
-    projects.remove(project)
-    delete_managed_image(project.get("image"))
-    save_site_content(content)
-    flash("Projeto removido.", "success")
-    return redirect(url_for("admin_projects"))
+
+# ---------------------------------------------------------------------------
+# Painel: publicacoes
+# ---------------------------------------------------------------------------
+
+def pagina_admin_publicacoes(rascunhos: dict | None = None):
+    db = get_db()
+    publicacoes_lista = repo.listar_publicacoes(db)
+    return render_template(
+        "admin/publications.html",
+        publicacoes=publicacoes_lista,
+        forms=_forms(publicacoes_lista, "publicacao", form_publicacao, rascunhos),
+        projetos=repo.listar_projetos(db),
+    )
 
 
 @app.route("/admin/publications")
 @admin_required
 def admin_publications():
-    content = load_site_content()
-    return render_template(
-        "admin/publications.html",
-        publications=content["publications"],
-    )
-
-
-@app.route("/admin/publications/settings", methods=["POST"])
-@admin_required
-def admin_update_publications_settings():
-    content = load_site_content()
-    page = content["publications"]["page"]
-    page["title"] = clean_text(request.form.get("title"))
-    page["subtitle"] = clean_text(request.form.get("subtitle"))
-    page["section_title"] = clean_text(request.form.get("section_title"))
-    save_site_content(content)
-    flash("Cabecalho da pagina de publicacoes atualizado.", "success")
-    return redirect(url_for("admin_publications"))
+    return pagina_admin_publicacoes()
 
 
 @app.route("/admin/publications/add", methods=["POST"])
 @admin_required
 def admin_add_publication():
-    content = load_site_content()
-    content["publications"]["items"].append(
-        {
-            "id": f"publication-{uuid4().hex}",
-            "year": clean_text(request.form.get("year")),
-            "title": clean_text(request.form.get("title")),
-            "participants": clean_text(request.form.get("participants")),
-            "journal": clean_text(request.form.get("journal")),
-            "doi_url": clean_text(request.form.get("doi_url")),
-        }
+    return _salvar(
+        "publicacao-novo",
+        pagina_admin_publicacoes,
+        url_for("admin_publications"),
+        lambda: repo.criar_publicacao(get_db(), request.form.to_dict(), usuario_id()),
+        "Publicacao adicionada com sucesso.",
     )
-    save_site_content(content)
-    flash("Publicacao adicionada com sucesso.", "success")
-    return redirect(url_for("admin_publications"))
 
 
-@app.route("/admin/publications/<item_id>/update", methods=["POST"])
+@app.route("/admin/publications/<int:item_id>/update", methods=["POST"])
 @admin_required
-def admin_update_publication(item_id: str):
-    content = load_site_content()
-    publication = find_item(content["publications"]["items"], item_id)
-    if not publication:
-        flash("Publicacao nao encontrada.", "danger")
-        return redirect(url_for("admin_publications"))
-
-    publication["year"] = clean_text(request.form.get("year"))
-    publication["title"] = clean_text(request.form.get("title"))
-    publication["participants"] = clean_text(request.form.get("participants"))
-    publication["journal"] = clean_text(request.form.get("journal"))
-    publication["doi_url"] = clean_text(request.form.get("doi_url"))
-
-    save_site_content(content)
-    flash("Publicacao atualizada.", "success")
-    return redirect(url_for("admin_publications"))
+def admin_update_publication(item_id: int):
+    return _salvar(
+        f"publicacao-{item_id}",
+        pagina_admin_publicacoes,
+        url_for("admin_publications") + f"#publicacao-{item_id}",
+        lambda: repo.atualizar_publicacao(get_db(), item_id, request.form.to_dict(), usuario_id()),
+        "Publicacao atualizada.",
+    )
 
 
-@app.route("/admin/publications/<item_id>/delete", methods=["POST"])
+@app.route("/admin/publications/<int:item_id>/delete", methods=["POST"])
 @admin_required
-def admin_delete_publication(item_id: str):
-    content = load_site_content()
-    publications = content["publications"]["items"]
-    publication = find_item(publications, item_id)
-    if not publication:
-        flash("Publicacao nao encontrada.", "danger")
-        return redirect(url_for("admin_publications"))
+def admin_delete_publication(item_id: int):
+    return _salvar(
+        f"publicacao-{item_id}",
+        pagina_admin_publicacoes,
+        url_for("admin_publications"),
+        lambda: repo.remover_publicacao(get_db(), item_id),
+        "Publicacao removida.",
+    )
 
-    publications.remove(publication)
-    save_site_content(content)
-    flash("Publicacao removida.", "success")
-    return redirect(url_for("admin_publications"))
+
+# ---------------------------------------------------------------------------
+# Painel: equipe (categorias e membros)
+# ---------------------------------------------------------------------------
+
+def pagina_admin_equipe(rascunhos: dict | None = None):
+    db = get_db()
+    membros = repo.listar_membros(db)
+    categorias = repo.listar_categorias(db)
+    secoes = [{**c, "membros": [m for m in membros if m["categoria_id"] == c["id"]]} for c in categorias]
+    forms = _forms(membros, "membro", form_membro, rascunhos)
+    for categoria in categorias:
+        forms.setdefault(f"categoria-{categoria['id']}", _sem_nulos(categoria))
+    forms.setdefault("categoria-novo", {})
+    return render_template(
+        "admin/team.html",
+        membros=membros,
+        categorias=categorias,
+        secoes=secoes,
+        forms=forms,
+    )
 
 
 @app.route("/admin/team")
 @admin_required
 def admin_team():
-    content = load_site_content()
-    team_content = content["team"]
-    return render_template(
-        "admin/team.html",
-        team=team_content,
-        team_sections=build_admin_team_sections(team_content),
+    return pagina_admin_equipe()
+
+
+@app.route("/admin/team/categories/add", methods=["POST"])
+@admin_required
+def admin_add_team_category():
+    return _salvar(
+        "categoria-novo",
+        pagina_admin_equipe,
+        url_for("admin_team") + "#categorias",
+        lambda: repo.criar_categoria(get_db(), request.form.to_dict()),
+        "Categoria criada.",
     )
 
 
-@app.route("/admin/team/settings", methods=["POST"])
+@app.route("/admin/team/categories/<int:category_id>/update", methods=["POST"])
 @admin_required
-def admin_update_team_settings():
-    content = load_site_content()
-    page = content["team"]["page"]
-    page["title"] = clean_text(request.form.get("title"))
-    page["subtitle"] = clean_text(request.form.get("subtitle"))
-    save_site_content(content)
-    flash("Cabecalho da pagina de equipe atualizado.", "success")
-    return redirect(url_for("admin_team"))
+def admin_update_team_category(category_id: int):
+    return _salvar(
+        f"categoria-{category_id}",
+        pagina_admin_equipe,
+        url_for("admin_team") + "#categorias",
+        lambda: repo.atualizar_categoria(get_db(), category_id, request.form.to_dict(), parcial=True),
+        "Categoria atualizada.",
+    )
 
 
-@app.route("/admin/team/categories/<category_id>/delete", methods=["POST"])
+@app.route("/admin/team/categories/<int:category_id>/delete", methods=["POST"])
 @admin_required
-def admin_delete_team_category(category_id: str):
-    content = load_site_content()
-    categories = content["team"]["categories"]
-    category = find_item(categories, category_id)
-    if not category:
-        flash("Categoria nao encontrada.", "danger")
-        return redirect(url_for("admin_team"))
-
-    for member in content["team"]["members"]:
-        if member.get("category") == category_id:
-            member["category"] = ""
-
-    categories.remove(category)
-    save_site_content(content)
-    flash("Categoria removida.", "success")
-    return redirect(url_for("admin_team"))
+def admin_delete_team_category(category_id: int):
+    return _salvar(
+        f"categoria-{category_id}",
+        pagina_admin_equipe,
+        url_for("admin_team") + "#categorias",
+        lambda: repo.remover_categoria(get_db(), category_id),
+        "Categoria removida.",
+    )
 
 
-@app.route("/admin/team/categories/<category_id>/update", methods=["POST"])
-@admin_required
-def admin_update_team_category(category_id: str):
-    content = load_site_content()
-    category = find_item(content["team"]["categories"], category_id)
-    if not category:
-        flash("Categoria da equipe nao encontrada.", "danger")
-        return redirect(url_for("admin_team"))
-
-    category["title"] = clean_text(request.form.get("title"))
-    save_site_content(content)
-    flash("Categoria atualizada.", "success")
-    return redirect(url_for("admin_team"))
+def _dados_membro() -> dict:
+    dados = request.form.to_dict()
+    dados["ativo"] = "ativo" in request.form
+    return dados
 
 
 @app.route("/admin/team/members/add", methods=["POST"])
 @admin_required
 def admin_add_team_member():
-    content = load_site_content()
-    category = clean_text(request.form.get("category"))
-    valid_categories = {item["id"] for item in content["team"]["categories"]}
-    if category not in valid_categories:
-        flash("Categoria invalida para o membro.", "danger")
-        return redirect(url_for("admin_team"))
-
-    image_file = request.files.get("image")
-    try:
-        image_path = save_uploaded_image(image_file, "team")
-    except ValueError as error:
-        flash(str(error), "danger")
-        return redirect(url_for("admin_team"))
-
-    if not image_path:
-        flash("Selecione uma imagem para o membro da equipe.", "danger")
-        return redirect(url_for("admin_team"))
-
-    content["team"]["members"].append(
-        {
-            "id": f"member-{uuid4().hex}",
-            "category": category,
-            "name": clean_text(request.form.get("name")),
-            "role": clean_text(request.form.get("role")),
-            "github_url": clean_text(request.form.get("github_url")),
-            "lattes_url": clean_text(request.form.get("lattes_url")),
-            "description": clean_text(request.form.get("description")),
-            "tags": parse_tags(request.form.get("tags")),
-            "image": image_path,
-        }
+    dados = _dados_membro()
+    return _salvar(
+        "membro-novo",
+        pagina_admin_equipe,
+        url_for("admin_team") + "#membros",
+        _com_imagem("foto", "team", lambda img: repo.criar_membro(get_db(), dados, usuario_id(), foto=img) and None, False),
+        "Membro adicionado com sucesso.",
     )
-    save_site_content(content)
-    flash("Membro adicionado com sucesso.", "success")
-    return redirect(url_for("admin_team"))
 
 
-@app.route("/admin/team/members/<item_id>/update", methods=["POST"])
+@app.route("/admin/team/members/<int:item_id>/update", methods=["POST"])
 @admin_required
-def admin_update_team_member(item_id: str):
-    content = load_site_content()
-    member = find_item(content["team"]["members"], item_id)
-    if not member:
-        flash("Membro nao encontrado.", "danger")
-        return redirect(url_for("admin_team"))
+def admin_update_team_member(item_id: int):
+    dados = _dados_membro()
+    db = get_db()
 
-    category = clean_text(request.form.get("category"))
-    valid_categories = {item["id"] for item in content["team"]["categories"]}
-    if category not in valid_categories:
-        flash("Categoria invalida para o membro.", "danger")
-        return redirect(url_for("admin_team"))
+    def acao(img):
+        antiga = repo.obter_membro(db, item_id)["foto"] if img else None
+        repo.atualizar_membro(db, item_id, dados, usuario_id(), foto=img)
+        return antiga
 
-    member["category"] = category
-    member["name"] = clean_text(request.form.get("name"))
-    member["role"] = clean_text(request.form.get("role"))
-    member["github_url"] = clean_text(request.form.get("github_url"))
-    member["lattes_url"] = clean_text(request.form.get("lattes_url"))
-    member["description"] = clean_text(request.form.get("description"))
-    member["tags"] = parse_tags(request.form.get("tags"))
-
-    image_file = request.files.get("image")
-    try:
-        new_image = save_uploaded_image(image_file, "team")
-    except ValueError as error:
-        flash(str(error), "danger")
-        return redirect(url_for("admin_team"))
-
-    if new_image:
-        delete_managed_image(member.get("image"))
-        member["image"] = new_image
-
-    save_site_content(content)
-    flash("Membro atualizado com sucesso.", "success")
-    return redirect(url_for("admin_team"))
+    return _salvar(
+        f"membro-{item_id}",
+        pagina_admin_equipe,
+        url_for("admin_team") + f"#membro-{item_id}",
+        _com_imagem("foto", "team", acao, False),
+        "Membro atualizado com sucesso.",
+    )
 
 
-@app.route("/admin/team/members/<item_id>/delete", methods=["POST"])
+@app.route("/admin/team/members/<int:item_id>/delete", methods=["POST"])
 @admin_required
-def admin_delete_team_member(item_id: str):
-    content = load_site_content()
-    members = content["team"]["members"]
-    member = find_item(members, item_id)
-    if not member:
-        flash("Membro nao encontrado.", "danger")
-        return redirect(url_for("admin_team"))
-
-    members.remove(member)
-    delete_managed_image(member.get("image"))
-    save_site_content(content)
-    flash("Membro removido com sucesso.", "success")
-    return redirect(url_for("admin_team"))
+def admin_delete_team_member(item_id: int):
+    return _salvar(
+        f"membro-{item_id}",
+        pagina_admin_equipe,
+        url_for("admin_team") + "#membros",
+        lambda: apagar_imagem(repo.remover_membro(get_db(), item_id)["foto"]),
+        "Membro removido com sucesso.",
+    )
 
 
-# ─── ADMIN CONTACT ────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Painel: contato e mensagens
+# ---------------------------------------------------------------------------
+
+def pagina_admin_contato(rascunhos: dict | None = None):
+    contatos = repo.listar_contatos(get_db())
+    return render_template(
+        "admin/contact.html",
+        contatos=contatos,
+        forms=_forms(contatos, "contato", form_contato, rascunhos),
+    )
+
 
 @app.route("/admin/contato")
 @admin_required
 def admin_contact():
-    content = load_site_content()
-    return render_template("admin/contact.html", contact=content["contact"])
+    return pagina_admin_contato()
 
 
 @app.route("/admin/contato/add", methods=["POST"])
 @admin_required
 def admin_add_contact():
-    content = load_site_content()
-    content["contact"]["items"].append(
-        {
-            "id": f"contact-{uuid4().hex}",
-            "icon": clean_text(request.form.get("icon")) or "bi-chat-dots-fill",
-            "title": clean_text(request.form.get("title")),
-            "value": clean_text(request.form.get("value")),
-            "subtitle": clean_text(request.form.get("subtitle")),
-            "link": clean_text(request.form.get("link")),
-        }
-    )
-    save_site_content(content)
-    flash("Forma de contato adicionada com sucesso.", "success")
-    return redirect(url_for("admin_contact"))
-
-
-@app.route("/admin/contato/<item_id>/update", methods=["POST"])
-@admin_required
-def admin_update_contact(item_id: str):
-    content = load_site_content()
-    item = find_item(content["contact"]["items"], item_id)
-    if not item:
-        flash("Forma de contato não encontrada.", "danger")
-        return redirect(url_for("admin_contact"))
-
-    item["icon"] = clean_text(request.form.get("icon")) or "bi-chat-dots-fill"
-    item["title"] = clean_text(request.form.get("title"))
-    item["value"] = clean_text(request.form.get("value"))
-    item["subtitle"] = clean_text(request.form.get("subtitle"))
-    item["link"] = clean_text(request.form.get("link"))
-
-    save_site_content(content)
-    flash("Forma de contato atualizada.", "success")
-    return redirect(url_for("admin_contact"))
-
-
-@app.route("/admin/contato/<item_id>/delete", methods=["POST"])
-@admin_required
-def admin_delete_contact(item_id: str):
-    content = load_site_content()
-    items = content["contact"]["items"]
-    item = find_item(items, item_id)
-    if not item:
-        flash("Forma de contato não encontrada.", "danger")
-        return redirect(url_for("admin_contact"))
-
-    items.remove(item)
-    save_site_content(content)
-    flash("Forma de contato removida.", "success")
-    return redirect(url_for("admin_contact"))
-
-
-# ─── GENERATE ONE-TIME LINKS (admin only) ────────────────────────────────────
-
-def _make_link(token_type: str, resource: str, item_id: str | None = None) -> str:
-    admin_user = getattr(g, "admin_user", {}) or {}
-    token = generate_token(token_type, resource, item_id, created_by=admin_user.get("email", ""))
-    if resource == "project":
-        return url_for("submit_resource", resource="project", token=token, _external=True)
-    if resource == "publication":
-        return url_for("submit_resource", resource="publication", token=token, _external=True)
-    return url_for("submit_resource", resource="member", token=token, _external=True)
-
-
-@app.route("/admin/projects/generate-link", methods=["POST"])
-@admin_required
-def admin_generate_project_add_link():
-    link = _make_link("add", "project")
-    flash(link, "generated_link")
-    return redirect(url_for("admin_projects"))
-
-
-@app.route("/admin/projects/<item_id>/generate-edit-link", methods=["POST"])
-@admin_required
-def admin_generate_project_edit_link(item_id: str):
-    content = load_site_content()
-    if not find_item(content["projects"]["items"], item_id):
-        flash("Projeto nao encontrado.", "danger")
-        return redirect(url_for("admin_projects"))
-    link = _make_link("edit", "project", item_id)
-    flash(link, "generated_link")
-    return redirect(url_for("admin_projects"))
-
-
-@app.route("/admin/publications/generate-link", methods=["POST"])
-@admin_required
-def admin_generate_publication_add_link():
-    link = _make_link("add", "publication")
-    flash(link, "generated_link")
-    return redirect(url_for("admin_publications"))
-
-
-@app.route("/admin/publications/<item_id>/generate-edit-link", methods=["POST"])
-@admin_required
-def admin_generate_publication_edit_link(item_id: str):
-    content = load_site_content()
-    if not find_item(content["publications"]["items"], item_id):
-        flash("Publicacao nao encontrada.", "danger")
-        return redirect(url_for("admin_publications"))
-    link = _make_link("edit", "publication", item_id)
-    flash(link, "generated_link")
-    return redirect(url_for("admin_publications"))
-
-
-@app.route("/admin/team/members/generate-link", methods=["POST"])
-@admin_required
-def admin_generate_member_add_link():
-    link = _make_link("add", "member")
-    flash(link, "generated_link")
-    return redirect(url_for("admin_team"))
-
-
-@app.route("/admin/team/members/<item_id>/generate-edit-link", methods=["POST"])
-@admin_required
-def admin_generate_member_edit_link(item_id: str):
-    content = load_site_content()
-    if not find_item(content["team"]["members"], item_id):
-        flash("Membro nao encontrado.", "danger")
-        return redirect(url_for("admin_team"))
-    link = _make_link("edit", "member", item_id)
-    flash(link, "generated_link")
-    return redirect(url_for("admin_team"))
-
-
-# ─── PUBLIC SUBMISSION FORM ───────────────────────────────────────────────────
-
-@app.route("/submit/<resource>/<token>", methods=["GET", "POST"])
-def submit_resource(resource: str, token: str):
-    if resource not in ("project", "publication", "member"):
-        abort(404)
-
-    token_data = validate_token(token)
-    if not token_data:
-        return render_template("submit/invalid.html"), 410
-
-    content = load_site_content()
-    existing = None
-    if token_data["type"] == "edit" and token_data.get("item_id"):
-        item_id = token_data["item_id"]
-        if resource == "project":
-            existing = find_item(content["projects"]["items"], item_id)
-        elif resource == "publication":
-            existing = find_item(content["publications"]["items"], item_id)
-        elif resource == "member":
-            existing = find_item(content["team"]["members"], item_id)
-
-    if request.method == "POST":
-        if resource == "project":
-            data = {
-                "badge": clean_text(request.form.get("badge")),
-                "title": clean_text(request.form.get("title")),
-                "students": clean_text(request.form.get("students")),
-                "advisor": clean_text(request.form.get("advisor")),
-                "about_text": clean_text(request.form.get("about_text")),
-            }
-        elif resource == "publication":
-            data = {
-                "year": clean_text(request.form.get("year")),
-                "title": clean_text(request.form.get("title")),
-                "participants": clean_text(request.form.get("participants")),
-                "journal": clean_text(request.form.get("journal")),
-                "doi_url": clean_text(request.form.get("doi_url")),
-            }
-        else:  # member
-            image_file = request.files.get("image")
-            pending_image = ""
-            if image_file and image_file.filename:
-                try:
-                    pending_image = save_uploaded_image(image_file, "pending-team")
-                except ValueError:
-                    pending_image = ""
-            data = {
-                "category": clean_text(request.form.get("category")),
-                "name": clean_text(request.form.get("name")),
-                "role": clean_text(request.form.get("role")),
-                "github_url": clean_text(request.form.get("github_url")),
-                "lattes_url": clean_text(request.form.get("lattes_url")),
-                "description": clean_text(request.form.get("description")),
-                "tags": parse_tags(request.form.get("tags")),
-                "image": pending_image,
-            }
-
-        mark_token_used(token)
-        add_pending(
-            resource=resource,
-            submission_type=token_data["type"],
-            data=data,
-            item_id=token_data.get("item_id"),
-        )
-
-        # notify all admin emails
-        recipients = list(get_admin_allowed_emails())
-        action = "adicionado" if token_data["type"] == "add" else "editado"
-        labels = {"project": "Projeto", "publication": "Publicação", "member": "Membro"}
-        send_notification(
-            subject=f"Nova submissão pendente: {labels.get(resource, resource)}",
-            body=(
-                f"Uma nova submissão aguarda validação no painel administrativo.\n\n"
-                f"Tipo: {labels.get(resource, resource)} ({action})\n"
-                f"Acesse: {url_for('admin_pending', _external=True)}"
-            ),
-            recipients=recipients,
-        )
-
-        return render_template("submit/success.html")
-
-    template_map = {
-        "project": "submit/project.html",
-        "publication": "submit/publication.html",
-        "member": "submit/member.html",
-    }
-    return render_template(
-        template_map[resource],
-        token_data=token_data,
-        existing=existing,
-        categories=content["team"].get("categories", []) if resource == "member" else [],
+    return _salvar(
+        "contato-novo",
+        pagina_admin_contato,
+        url_for("admin_contact"),
+        lambda: repo.criar_contato(get_db(), request.form.to_dict(), usuario_id()),
+        "Forma de contato adicionada com sucesso.",
     )
 
 
-# ─── ADMIN PENDING VALIDATION ─────────────────────────────────────────────────
-
-@app.route("/admin/pending")
+@app.route("/admin/contato/<int:item_id>/update", methods=["POST"])
 @admin_required
-def admin_pending():
-    return render_template("admin/pending.html", submissions=get_pending_list())
+def admin_update_contact(item_id: int):
+    return _salvar(
+        f"contato-{item_id}",
+        pagina_admin_contato,
+        url_for("admin_contact"),
+        lambda: repo.atualizar_contato(get_db(), item_id, request.form.to_dict(), usuario_id()),
+        "Forma de contato atualizada.",
+    )
 
 
-@app.route("/admin/pending/<submission_id>/approve", methods=["POST"])
+@app.route("/admin/contato/<int:item_id>/delete", methods=["POST"])
 @admin_required
-def admin_approve_submission(submission_id: str):
-    submission = get_pending_item(submission_id)
-    if not submission or submission.get("status") != "pending":
-        flash("Submissão não encontrada ou já processada.", "danger")
-        return redirect(url_for("admin_pending"))
-
-    content = load_site_content()
-    resource = submission["resource"]
-    sub_type = submission["type"]
-    data = submission["data"]
-
-    if resource == "project":
-        if sub_type == "add":
-            content["projects"]["items"].append({
-                "id": f"project-{uuid4().hex}",
-                "badge": data.get("badge", ""),
-                "title": data.get("title", ""),
-                "students": data.get("students", ""),
-                "advisor": data.get("advisor", ""),
-                "image": "",
-                "about_text": data.get("about_text", ""),
-            })
-        else:
-            project = find_item(content["projects"]["items"], submission.get("item_id", ""))
-            if project:
-                project.update({k: data[k] for k in ("badge", "title", "students", "advisor", "about_text") if k in data})
-
-    elif resource == "publication":
-        if sub_type == "add":
-            content["publications"]["items"].append({
-                "id": f"publication-{uuid4().hex}",
-                "year": data.get("year", ""),
-                "title": data.get("title", ""),
-                "participants": data.get("participants", ""),
-                "journal": data.get("journal", ""),
-                "doi_url": data.get("doi_url", ""),
-            })
-        else:
-            pub = find_item(content["publications"]["items"], submission.get("item_id", ""))
-            if pub:
-                pub.update({k: data[k] for k in ("year", "title", "participants", "journal", "doi_url") if k in data})
-
-    elif resource == "member":
-        valid_categories = {c["id"] for c in content["team"].get("categories", [])}
-        if sub_type == "add":
-            content["team"]["members"].append({
-                "id": f"member-{uuid4().hex}",
-                "category": data.get("category", "") if data.get("category") in valid_categories else "",
-                "name": data.get("name", ""),
-                "role": data.get("role", ""),
-                "github_url": data.get("github_url", ""),
-                "lattes_url": data.get("lattes_url", ""),
-                "description": data.get("description", ""),
-                "tags": data.get("tags", []),
-                "image": data.get("image", ""),
-            })
-        else:
-            member = find_item(content["team"]["members"], submission.get("item_id", ""))
-            if member:
-                for key in ("name", "role", "github_url", "lattes_url", "description", "tags"):
-                    if key in data:
-                        member[key] = data[key]
-                if data.get("category") in valid_categories:
-                    member["category"] = data["category"]
-                if data.get("image"):
-                    member["image"] = data["image"]
-
-    save_site_content(content)
-    mark_approved(submission_id)
-    flash("Submissão aprovada e publicada no site.", "success")
-    return redirect(url_for("admin_pending"))
-
-
-@app.route("/admin/pending/<submission_id>/reject", methods=["POST"])
-@admin_required
-def admin_reject_submission(submission_id: str):
-    submission = get_pending_item(submission_id)
-    if not submission or submission.get("status") != "pending":
-        flash("Submissão não encontrada ou já processada.", "danger")
-        return redirect(url_for("admin_pending"))
-
-    mark_rejected(submission_id)
-    flash("Submissão rejeitada.", "warning")
-    return redirect(url_for("admin_pending"))
+def admin_delete_contact(item_id: int):
+    return _salvar(
+        f"contato-{item_id}",
+        pagina_admin_contato,
+        url_for("admin_contact"),
+        lambda: repo.remover_contato(get_db(), item_id),
+        "Forma de contato removida.",
+    )
 
 
 @app.route("/admin/mensagens")
 @admin_required
 def admin_mensagens():
     apenas_nao_lidas = request.args.get("filtro") == "nao_lidas"
-    mensagens = get_mensagens(apenas_nao_lidas=apenas_nao_lidas)
     return render_template(
         "admin/mensagens.html",
-        mensagens=mensagens,
+        mensagens=repo.listar_mensagens(get_db(), apenas_nao_lidas=apenas_nao_lidas),
         apenas_nao_lidas=apenas_nao_lidas,
     )
 
@@ -1344,8 +746,222 @@ def admin_mensagens():
 @app.route("/admin/mensagens/<int:mensagem_id>/marcar-lida", methods=["POST"])
 @admin_required
 def admin_marcar_mensagem_lida(mensagem_id: int):
-    mark_mensagem_lida(mensagem_id)
+    lida = request.form.get("lida", "1") == "1"
+    try:
+        repo.marcar_mensagem(get_db(), mensagem_id, lida)
+    except ErroDominio as exc:
+        flash(exc.mensagem, "danger")
     return redirect(url_for("admin_mensagens", filtro=request.args.get("filtro")))
+
+
+@app.route("/admin/mensagens/<int:mensagem_id>/delete", methods=["POST"])
+@admin_required
+def admin_remover_mensagem(mensagem_id: int):
+    try:
+        repo.remover_mensagem(get_db(), mensagem_id)
+        flash("Mensagem removida.", "success")
+    except ErroDominio as exc:
+        flash(exc.mensagem, "danger")
+    return redirect(url_for("admin_mensagens", filtro=request.args.get("filtro")))
+
+
+# ---------------------------------------------------------------------------
+# Links de uso unico (gerados no painel) e submissoes pendentes
+# ---------------------------------------------------------------------------
+
+@app.route("/admin/links", methods=["POST"])
+@admin_required
+def admin_gerar_link():
+    # sem ancora: o link gerado aparece no topo da pagina e precisa ficar visivel
+    destino = _voltar(url_for("admin_pending")).split("#", 1)[0]
+    dados = {chave: request.form.get(chave) for chave in ("recurso", "acao", "item_id", "validade_dias")}
+    try:
+        link = repo.gerar_link(get_db(), dados, usuario_id())
+    except ErroDominio as exc:
+        for mensagem in exc.mensagens():
+            flash(mensagem, "danger")
+    else:
+        flash(url_do_link(link), "generated_link")
+    return redirect(destino)
+
+
+@app.route("/admin/links/<int:link_id>/delete", methods=["POST"])
+@admin_required
+def admin_revogar_link(link_id: int):
+    try:
+        repo.revogar_link(get_db(), link_id)
+        flash("Link revogado.", "success")
+    except ErroDominio as exc:
+        flash(exc.mensagem, "danger")
+    return redirect(url_for("admin_pending") + "#links")
+
+
+def resumo_submissao(db, recurso: str, dados: dict | None) -> list[tuple[str, str]]:
+    """Campos legiveis (rotulo, valor) de uma submissao ou de um registro atual."""
+    if not dados:
+        return []
+    nomes_membros = {m["id"]: m["nome"] for m in repo.listar_membros(db)}
+    if recurso == "membro":
+        categorias = {c["id"]: c["titulo"] for c in repo.listar_categorias(db)}
+        campos = [
+            ("Categoria", categorias.get(dados.get("categoria_id"), "")),
+            ("Nome", dados.get("nome")),
+            ("Funcao", dados.get("funcao")),
+            ("E-mail", dados.get("email")),
+            ("GitHub", dados.get("github_url")),
+            ("Lattes", dados.get("lattes_url")),
+            ("Descricao", dados.get("descricao")),
+            ("Tags", ", ".join(dados.get("tags") or [])),
+            ("Foto", "nova foto enviada" if dados.get("foto") else ""),
+        ]
+    elif recurso == "projeto":
+        participantes = [
+            nomes_membros.get(p.get("membro_id"), p.get("nome") or "") + ("" if p.get("papel", "estudante") == "estudante" else f" ({p['papel']})")
+            for p in dados.get("participantes") or []
+        ]
+        campos = [
+            ("Titulo", dados.get("titulo")),
+            ("Modalidade", v.MODALIDADE_ROTULO.get(dados.get("modalidade"), dados.get("modalidade"))),
+            ("Situacao", v.STATUS_PROJETO_ROTULO.get(dados.get("status"), dados.get("status"))),
+            ("Ano de inicio", dados.get("ano_inicio")),
+            ("Ano de termino", dados.get("ano_fim")),
+            ("Orientador", nomes_membros.get(dados.get("orientador_id"), "")),
+            ("Participantes", ", ".join(participantes)),
+            ("Descricao", dados.get("descricao")),
+        ]
+    else:
+        projetos_titulos = {p["id"]: p["titulo"] for p in repo.listar_projetos(db)}
+        campos = [
+            ("Titulo", dados.get("titulo")),
+            ("Ano", dados.get("ano")),
+            ("Tipo", v.TIPO_PUBLICACAO_ROTULO.get(dados.get("tipo"), dados.get("tipo"))),
+            ("Veiculo", dados.get("veiculo")),
+            ("Autores", "; ".join(a.get("nome_citacao") or a.get("nome") or "" for a in dados.get("autores") or [])),
+            ("DOI", dados.get("doi")),
+            ("Link", dados.get("url")),
+            ("Projeto", projetos_titulos.get(dados.get("projeto_id"), "")),
+        ]
+    return [(rotulo, "" if valor is None else str(valor)) for rotulo, valor in campos]
+
+
+_ENTRADA = {
+    "membro": repo.membro_para_entrada,
+    "projeto": repo.projeto_para_entrada,
+    "publicacao": repo.publicacao_para_entrada,
+}
+
+
+@app.route("/admin/pending")
+@admin_required
+def admin_pending():
+    db = get_db()
+    submissoes = []
+    for submissao in repo.listar_submissoes(db, "pendente"):
+        atual = _ENTRADA[submissao["recurso"]](submissao["atual"]) if submissao["atual"] else None
+        submissoes.append(
+            {
+                **submissao,
+                "campos": resumo_submissao(db, submissao["recurso"], submissao["dados"]),
+                "campos_atuais": resumo_submissao(db, submissao["recurso"], atual),
+            }
+        )
+    return render_template(
+        "admin/pending.html",
+        submissoes=submissoes,
+        historico=repo.listar_submissoes(db, None)[:15],
+        links=repo.listar_links(db, apenas_ativos=True),
+    )
+
+
+@app.route("/admin/pending/<int:submission_id>/approve", methods=["POST"])
+@admin_required
+def admin_approve_submission(submission_id: int):
+    try:
+        repo.aprovar_submissao(get_db(), submission_id, usuario_id())
+        flash("Submissao aprovada e publicada no site.", "success")
+    except ErroDominio as exc:
+        flash("Nao foi possivel aprovar: " + " ".join(exc.mensagens()), "danger")
+    return redirect(url_for("admin_pending"))
+
+
+@app.route("/admin/pending/<int:submission_id>/reject", methods=["POST"])
+@admin_required
+def admin_reject_submission(submission_id: int):
+    try:
+        submissao = repo.rejeitar_submissao(get_db(), submission_id, usuario_id())
+        apagar_imagem(submissao["dados"].get("foto"))
+        flash("Submissao rejeitada.", "warning")
+    except ErroDominio as exc:
+        flash(exc.mensagem, "danger")
+    return redirect(url_for("admin_pending"))
+
+
+# ---------------------------------------------------------------------------
+# Formulario publico acessado pelo link de uso unico
+# ---------------------------------------------------------------------------
+
+_CAMPOS_SUBMISSAO = {
+    "membro": ("categoria_id", "nome", "funcao", "email", "github_url", "lattes_url", "descricao", "tags"),
+    "projeto": ("titulo", "modalidade", "status", "ano_inicio", "ano_fim", "orientador_id", "participantes", "descricao"),
+    "publicacao": ("titulo", "ano", "tipo", "veiculo", "autores", "doi", "url", "projeto_id"),
+}
+_VALIDAR = {"membro": v.validar_membro, "projeto": v.validar_projeto, "publicacao": v.validar_publicacao}
+_FORM = {"membro": form_membro, "projeto": form_projeto, "publicacao": form_publicacao}
+_OBTER = {"membro": repo.obter_membro, "projeto": repo.obter_projeto, "publicacao": repo.obter_publicacao}
+_ROTULO_RECURSO = {"membro": "Membro da equipe", "projeto": "Projeto", "publicacao": "Publicacao"}
+
+
+@app.route("/submit/<recurso>/<token>", methods=["GET", "POST"])
+def submit_resource(recurso: str, token: str):
+    if recurso not in _CAMPOS_SUBMISSAO:
+        abort(404)
+    db = get_db()
+    link = repo.validar_token(db, token, recurso)
+    if not link:
+        return render_template("submit/invalid.html"), 410
+
+    atual = _OBTER[recurso](db, link["item_id"]) if link["acao"] == "editar" else None
+    valores = _FORM[recurso](atual)
+    erros: dict[str, str] = {}
+
+    if request.method == "POST":
+        entrada = {campo: request.form.get(campo) for campo in _CAMPOS_SUBMISSAO[recurso]}
+        valores = _sem_nulos(entrada)
+        foto = None
+        try:
+            validado = _VALIDAR[recurso](entrada)
+            dados = {campo: validado[campo] for campo in _CAMPOS_SUBMISSAO[recurso]}
+            repo.simular_submissao(db, recurso, link["acao"], link["item_id"], dados)
+            if recurso == "membro":
+                foto = salvar_imagem(request.files.get("foto"), "pending-team", "foto")
+                if foto:
+                    dados["foto"] = foto
+            repo.registrar_submissao(db, link, dados)
+        except ErroDominio as exc:
+            apagar_imagem(foto)
+            erros = exc.campos or {"_": exc.mensagem}
+        else:
+            send_notification(
+                subject=f"Nova submissao pendente: {_ROTULO_RECURSO[recurso]}",
+                body=(
+                    "Uma nova submissao aguarda validacao no painel administrativo.\n\n"
+                    f"Tipo: {_ROTULO_RECURSO[recurso]} ({link['acao']})\n"
+                    f"Acesse: {url_for('admin_pending', _external=True)}"
+                ),
+                recipients=list(get_admin_allowed_emails()),
+            )
+            return render_template("submit/success.html")
+
+    db_membros = repo.listar_membros(db) if recurso == "projeto" else []
+    return render_template(
+        f"submit/{recurso}.html",
+        link=link,
+        f=valores,
+        erros=erros,
+        categorias=repo.listar_categorias(db) if recurso == "membro" else [],
+        membros=db_membros,
+        projetos=repo.listar_projetos(db) if recurso == "publicacao" else [],
+    ), (422 if erros else 200)
 
 
 if __name__ == "__main__":
