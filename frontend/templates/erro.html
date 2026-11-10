@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} | GPTCode{% endblock %}
+{% block content %}
+<main class="py-5">
+  <div class="container text-center" style="max-width:640px; margin-top: 4rem;">
+    <div class="card shadow-sm border-0 p-5">
+      <p class="display-4 fw-bold text-warning mb-2">{{ codigo }}</p>
+      <h2 class="fw-bold mb-3">{{ titulo }}</h2>
+      <p class="text-muted mb-4">{{ mensagem }}</p>
+      {% if rascunho %}
+      <div class="text-start border rounded p-3 mb-4 small">
+        <strong>O que você digitou</strong>
+        <dl class="mb-0 mt-2">
+          {% for rotulo, valor in rascunho %}
+          <dt>{{ rotulo }}</dt><dd style="white-space:pre-wrap">{{ valor }}</dd>
+          {% endfor %}
+        </dl>
+      </div>
+      {% endif %}
+      <div class="d-flex justify-content-center gap-2">
+        {% if request.path.startswith('/admin') %}
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-warning fw-semibold">Voltar ao painel</a>
+        {% endif %}
+        <a href="{{ url_for('index') }}" class="btn btn-outline-warning fw-semibold">Ir para o site</a>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

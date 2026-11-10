@@ -1,0 +1,69 @@
+{#
+  Página padrão de um cadastro do painel (lista de cards editáveis + formulário de novo item).
+  Usada por admin/projects.html e admin/publications.html.
+    cad    -> textos e rotas do cadastro (ver as páginas que chamam)
+    itens  -> registros a listar
+    forms  -> valores de cada formulário (chave '<recurso>-<id>' ou '<recurso>-novo')
+    campos -> macro campos(f, erros) com os campos do formulário
+    selos  -> macro selos(item) com os selos do topo do card
+#}
+{% import '_campos.html' as c with context %}
+
+{% macro pagina(cad, itens, forms, campos, selos) %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">{{ cad.titulo }}</h1>
+    <p class="lead text-white-50">{{ cad.descricao }}</p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex flex-wrap gap-2 justify-content-end mb-4">
+      {{ c.botao_link(cad.recurso, 'criar', voltar=url_for(cad.lista), rotulo=cad.rotulo_link, classe_botao='btn-outline-warning') }}
+      <a href="#adicionar-{{ cad.recurso }}" class="btn btn-warning">{{ cad.rotulo_adicionar }}</a>
+    </div>
+
+    {% if not itens %}
+    <div class="admin-item-card admin-item-card-dashed mb-4">
+      <p class="admin-help-text mb-0">{{ cad.vazio }}</p>
+    </div>
+    {% endif %}
+
+    <div class="row g-4 mb-4">
+      {% for item in itens %}
+      {% set chave = cad.recurso ~ '-' ~ item.id %}
+      <div class="col-xl-6" id="{{ chave }}">
+        <div class="admin-item-card h-100">
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            {{ selos(item) }}
+            <small class="text-muted ms-auto">Atualizado em {{ item.atualizado_em }}</small>
+          </div>
+          <form method="post" action="{{ url_for(cad.atualizar, item_id=item.id) }}" class="admin-form">{{ csrf_campo() }}
+            {{ campos(forms[chave], erros_form.get(chave, {})) }}
+            <button type="submit" class="btn btn-warning mt-4">{{ cad.rotulo_salvar }}</button>
+          </form>
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            {{ c.botao_link(cad.recurso, 'editar', item.id, url_for(cad.lista) ~ '#' ~ chave) }}
+            <form method="post" action="{{ url_for(cad.remover, item_id=item.id) }}"
+                  onsubmit="return confirm('{{ cad.confirmar_remocao }}')">{{ csrf_campo() }}
+              <button type="submit" class="btn btn-outline-danger btn-sm">{{ cad.rotulo_remover }}</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="admin-panel-card" id="adicionar-{{ cad.recurso }}">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">{{ cad.rotulo_adicionar }}</h2>
+      </div>
+      <form method="post" action="{{ url_for(cad.adicionar) }}" class="admin-form">{{ csrf_campo() }}
+        {{ campos(forms[cad.recurso ~ '-novo'], erros_form.get(cad.recurso ~ '-novo', {})) }}
+        <button type="submit" class="btn btn-warning mt-4">{{ cad.rotulo_botao_novo }}</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endmacro %}

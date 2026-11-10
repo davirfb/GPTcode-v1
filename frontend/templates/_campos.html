@@ -1,0 +1,274 @@
+{#
+  Campos dos formularios de membro, projeto e publicacao.
+  Usados pelo painel (admin/*.html) e pelos formularios dos links de uso
+  unico (submit/*.html), para que as duas telas tenham exatamente os
+  mesmos campos e as mesmas regras.
+    f      -> dict com os valores atuais do formulario
+    erros  -> dict campo -> mensagem (opcional)
+#}
+
+{% macro erro(erros, campo) -%}
+  {% if erros and erros.get(campo) %}<div class="invalid-feedback d-block">{{ erros[campo] }}</div>{% endif %}
+{%- endmacro %}
+
+{% macro classe(erros, campo) -%}
+  {{ 'is-invalid' if erros and erros.get(campo) else '' }}
+{%- endmacro %}
+
+{#
+  Campo de upload de imagem com pré-visualização: mostra a imagem em uso no site
+  e, ao escolher um arquivo, a nova imagem (ainda não salva). O comportamento fica
+  em static/js/main.js (input[data-previa]).
+    atual         -> caminho em /static da imagem em uso (ou None)
+    classe_previa -> formato da miniatura (campo-imagem-retrato, admin-preview-image...)
+#}
+{% macro campo_imagem(nome, rotulo, atual=None, erros={}, ajuda='', obrigatorio=False, classe_previa='campo-imagem-retrato') %}
+<div class="campo-imagem">
+  <label class="form-label">{{ rotulo }}{% if ajuda %} <span class="text-muted fw-normal">({{ ajuda }})</span>{% endif %}</label>
+  <figure class="campo-imagem-figura mb-2 {% if not atual %}d-none{% endif %}">
+    <img class="campo-imagem-previa {{ classe_previa }}"
+         src="{{ url_for('static', filename=atual) if atual else '' }}"
+         data-original="{{ url_for('static', filename=atual) if atual else '' }}"
+         alt="Pré-visualização: {{ rotulo | lower }}" />
+    <figcaption class="form-text campo-imagem-legenda">{{ 'Imagem em uso no site' if atual else '' }}</figcaption>
+  </figure>
+  <input class="form-control {{ classe(erros, nome) }}" type="file" name="{{ nome }}"
+         accept=".png,.jpg,.jpeg,.gif,.webp" data-previa data-limite-mb="8" {% if obrigatorio %}required{% endif %} />
+  {{ erro(erros, nome) }}
+</div>
+{% endmacro %}
+
+{% macro campos_membro(f, categorias, erros={}, admin=True, id_form='novo', foto_atual=None) %}
+<div class="admin-form-grid">
+  <div>
+    <label class="form-label">Categoria</label>
+    <select class="form-select {{ classe(erros, 'categoria_id') }}" name="categoria_id" required>
+      <option value="" disabled {% if not f.categoria_id %}selected{% endif %}>-- Selecione --</option>
+      {% for categoria in categorias %}
+      <option value="{{ categoria.id }}" {% if f.categoria_id|string == categoria.id|string %}selected{% endif %}>{{ categoria.titulo }}</option>
+      {% endfor %}
+    </select>
+    {{ erro(erros, 'categoria_id') }}
+  </div>
+  <div>
+    <label class="form-label">Função <span class="text-muted fw-normal">(ex.: Aluno de Graduação)</span></label>
+    <input class="form-control {{ classe(erros, 'funcao') }}" name="funcao" value="{{ f.funcao }}" maxlength="80" />
+    {{ erro(erros, 'funcao') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Nome completo</label>
+    <input class="form-control {{ classe(erros, 'nome') }}" name="nome" value="{{ f.nome }}" minlength="3" maxlength="120" required />
+    {{ erro(erros, 'nome') }}
+  </div>
+  <div>
+    <label class="form-label">GitHub <span class="text-muted fw-normal">(usuário ou endereço)</span></label>
+    <input class="form-control {{ classe(erros, 'github_url') }}" name="github_url" value="{{ f.github_url }}" placeholder="https://github.com/usuario" />
+    {{ erro(erros, 'github_url') }}
+  </div>
+  <div>
+    <label class="form-label">Lattes <span class="text-muted fw-normal">(endereço ou ID de 16 dígitos)</span></label>
+    <input class="form-control {{ classe(erros, 'lattes_url') }}" name="lattes_url" value="{{ f.lattes_url }}" placeholder="http://lattes.cnpq.br/0000000000000000" />
+    {{ erro(erros, 'lattes_url') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">E-mail <span class="text-muted fw-normal">(opcional, não aparece no site)</span></label>
+    <input class="form-control {{ classe(erros, 'email') }}" type="email" name="email" value="{{ f.email }}" maxlength="254" />
+    {{ erro(erros, 'email') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Descrição</label>
+    <textarea class="form-control {{ classe(erros, 'descricao') }}" name="descricao" rows="4" maxlength="800">{{ f.descricao }}</textarea>
+    {{ erro(erros, 'descricao') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Tags <span class="text-muted fw-normal">(separadas por vírgula, até 10)</span></label>
+    <input class="form-control {{ classe(erros, 'tags') }}" name="tags" value="{{ f.tags }}" placeholder="Python, Web, Pesquisa" />
+    {{ erro(erros, 'tags') }}
+  </div>
+  <div class="admin-grid-span-2">
+    {{ campo_imagem('foto', 'Foto', foto_atual, erros=erros, ajuda='opcional - PNG, JPG, GIF ou WEBP, até 8 MB', classe_previa='campo-imagem-retrato') }}
+  </div>
+  {% if admin %}
+  <div class="admin-grid-span-2 form-check ms-1">
+    <input class="form-check-input" type="checkbox" name="ativo" value="1" id="ativo-{{ id_form }}" {% if f.ativo %}checked{% endif %} />
+    <label class="form-check-label" for="ativo-{{ id_form }}">Exibir na página Equipe</label>
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro campos_projeto(f, membros, erros={}) %}
+<div class="admin-form-grid">
+  <div class="admin-grid-span-2">
+    <label class="form-label">Título do projeto</label>
+    <input class="form-control {{ classe(erros, 'titulo') }}" name="titulo" value="{{ f.titulo }}" minlength="5" maxlength="200" required />
+    {{ erro(erros, 'titulo') }}
+  </div>
+  <div>
+    <label class="form-label">Modalidade</label>
+    <select class="form-select {{ classe(erros, 'modalidade') }}" name="modalidade" required>
+      <option value="" disabled {% if not f.modalidade %}selected{% endif %}>-- Selecione --</option>
+      {% for valor, rotulo in rotulos.modalidades.items() %}
+      <option value="{{ valor }}" {% if f.modalidade == valor %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+    {{ erro(erros, 'modalidade') }}
+  </div>
+  <div>
+    <label class="form-label">Situação</label>
+    <select class="form-select {{ classe(erros, 'status') }}" name="status">
+      {% for valor, rotulo in rotulos.status_projeto.items() %}
+      <option value="{{ valor }}" {% if (f.status or 'em_andamento') == valor %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+    {{ erro(erros, 'status') }}
+  </div>
+  <div>
+    <label class="form-label">Ano de início <span class="text-muted fw-normal">(opcional)</span></label>
+    <input class="form-control {{ classe(erros, 'ano_inicio') }}" type="number" name="ano_inicio" value="{{ f.ano_inicio }}" min="2000" max="2100" />
+    {{ erro(erros, 'ano_inicio') }}
+  </div>
+  <div>
+    <label class="form-label">Ano de término <span class="text-muted fw-normal">(obrigatório se concluído)</span></label>
+    <input class="form-control {{ classe(erros, 'ano_fim') }}" type="number" name="ano_fim" value="{{ f.ano_fim }}" min="2000" max="2100" />
+    {{ erro(erros, 'ano_fim') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Orientador</label>
+    <select class="form-select {{ classe(erros, 'orientador_id') }}" name="orientador_id">
+      <option value="">-- Sem orientador cadastrado --</option>
+      {% for grupo in membros | groupby('categoria.titulo') %}
+      <optgroup label="{{ grupo.grouper }}">
+        {% for membro in grupo.list %}
+        <option value="{{ membro.id }}" {% if f.orientador_id|string == membro.id|string %}selected{% endif %}>{{ membro.nome }}</option>
+        {% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+    {{ erro(erros, 'orientador_id') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">
+      Estudantes e colaboradores
+      <span class="text-muted fw-normal">(um por linha; para outro papel use "Nome (coorientador)" ou "Nome (colaborador)")</span>
+    </label>
+    <textarea class="form-control {{ classe(erros, 'participantes') }}" name="participantes" rows="3">{{ f.participantes }}</textarea>
+    <div class="form-text">Nomes iguais aos da página Equipe são vinculados automaticamente ao cadastro do membro.</div>
+    {{ erro(erros, 'participantes') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Descrição <span class="text-muted fw-normal">(opcional - ao preencher, exibe o botão "Sobre" no site)</span></label>
+    <textarea class="form-control {{ classe(erros, 'descricao') }}" name="descricao" rows="4" maxlength="3000">{{ f.descricao }}</textarea>
+    {{ erro(erros, 'descricao') }}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro campos_publicacao(f, projetos, erros={}) %}
+<div class="admin-form-grid">
+  <div>
+    <label class="form-label">Ano</label>
+    <input class="form-control {{ classe(erros, 'ano') }}" type="number" name="ano" value="{{ f.ano }}" min="1950" max="2100" required />
+    {{ erro(erros, 'ano') }}
+  </div>
+  <div>
+    <label class="form-label">Tipo</label>
+    <select class="form-select {{ classe(erros, 'tipo') }}" name="tipo">
+      {% for valor, rotulo in rotulos.tipos_publicacao.items() %}
+      <option value="{{ valor }}" {% if (f.tipo or 'artigo') == valor %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+    {{ erro(erros, 'tipo') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Título</label>
+    <input class="form-control {{ classe(erros, 'titulo') }}" name="titulo" value="{{ f.titulo }}" minlength="5" maxlength="300" required />
+    {{ erro(erros, 'titulo') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Autores <span class="text-muted fw-normal">(um por linha, na ordem da citação - ex.: PEREIRA, Dauster Souza)</span></label>
+    <textarea class="form-control {{ classe(erros, 'autores') }}" name="autores" rows="3" required>{{ f.autores }}</textarea>
+    {{ erro(erros, 'autores') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Revista / evento / editora</label>
+    <textarea class="form-control {{ classe(erros, 'veiculo') }}" name="veiculo" rows="2" maxlength="300">{{ f.veiculo }}</textarea>
+    {{ erro(erros, 'veiculo') }}
+  </div>
+  <div>
+    <label class="form-label">DOI <span class="text-muted fw-normal">(opcional)</span></label>
+    <input class="form-control {{ classe(erros, 'doi') }}" name="doi" value="{{ f.doi }}" placeholder="10.1590/..." />
+    {{ erro(erros, 'doi') }}
+  </div>
+  <div>
+    <label class="form-label">Link para leitura <span class="text-muted fw-normal">(opcional)</span></label>
+    <input class="form-control {{ classe(erros, 'url') }}" type="url" name="url" value="{{ f.url }}" placeholder="https://" />
+    {{ erro(erros, 'url') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Projeto de origem <span class="text-muted fw-normal">(opcional)</span></label>
+    <select class="form-select {{ classe(erros, 'projeto_id') }}" name="projeto_id">
+      <option value="">-- Nenhum --</option>
+      {% for projeto in projetos %}
+      <option value="{{ projeto.id }}" {% if f.projeto_id|string == projeto.id|string %}selected{% endif %}>{{ projeto.titulo | truncate(90) }}</option>
+      {% endfor %}
+    </select>
+    {{ erro(erros, 'projeto_id') }}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro campos_contato(f, erros={}) %}
+<div class="admin-form-grid">
+  <div>
+    <label class="form-label">Tipo</label>
+    <select class="form-select {{ classe(erros, 'tipo') }}" name="tipo" required>
+      {% for valor, rotulo in rotulos.tipos_contato.items() %}
+      <option value="{{ valor }}" {% if f.tipo == valor %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+    {{ erro(erros, 'tipo') }}
+  </div>
+  <div>
+    <label class="form-label">Título</label>
+    <input class="form-control {{ classe(erros, 'titulo') }}" name="titulo" value="{{ f.titulo }}" maxlength="60" placeholder="Ex.: E-mail" required />
+    {{ erro(erros, 'titulo') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Valor <span class="text-muted fw-normal small">(texto exibido no card; quebras de linha são mantidas)</span></label>
+    <textarea class="form-control {{ classe(erros, 'valor') }}" name="valor" rows="2" maxlength="300" required>{{ f.valor }}</textarea>
+    {{ erro(erros, 'valor') }}
+  </div>
+  <div>
+    <label class="form-label">Subtítulo <span class="text-muted fw-normal small">(opcional)</span></label>
+    <input class="form-control {{ classe(erros, 'subtitulo') }}" name="subtitulo" value="{{ f.subtitulo }}" maxlength="120" />
+    {{ erro(erros, 'subtitulo') }}
+  </div>
+  <div>
+    <label class="form-label">Link <span class="text-muted fw-normal small">(opcional - https://, mailto: ou tel:)</span></label>
+    <input class="form-control {{ classe(erros, 'link') }}" name="link" value="{{ f.link }}" />
+    {{ erro(erros, 'link') }}
+  </div>
+  <div class="admin-grid-span-2">
+    <label class="form-label">Ícone Bootstrap
+      <span class="text-muted fw-normal small">
+        (opcional; vazio usa o ícone do tipo - <a href="https://icons.getbootstrap.com/" target="_blank" rel="noopener noreferrer">lista de ícones</a>)
+      </span>
+    </label>
+    <input class="form-control font-monospace {{ classe(erros, 'icone') }}" name="icone" value="{{ f.icone }}" placeholder="Ex.: bi-envelope-fill" />
+    {{ erro(erros, 'icone') }}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro botao_link(recurso, acao, item_id=None, voltar='', rotulo='Gerar link de edição', classe_botao='btn-outline-secondary btn-sm') %}
+<form method="post" action="{{ url_for('admin_gerar_link') }}">{{ csrf_campo() }}
+  <input type="hidden" name="recurso" value="{{ recurso }}" />
+  <input type="hidden" name="acao" value="{{ acao }}" />
+  {% if item_id %}<input type="hidden" name="item_id" value="{{ item_id }}" />{% endif %}
+  <input type="hidden" name="voltar" value="{{ voltar }}" />
+  <button type="submit" class="btn {{ classe_botao }}">
+    <i class="bi bi-link-45deg me-1"></i>{{ rotulo }}
+  </button>
+</form>
+{% endmacro %}
