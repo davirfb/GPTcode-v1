@@ -29,8 +29,6 @@ services:
       # Quem pode entrar no painel
       - key: ADMIN_ALLOWED_EMAILS
         sync: false
-      - key: ADMIN_ALLOWED_DOMAINS
-        value: .ifb.edu.br
       # Endereço público: usado nos links dos e-mails e dos formulários de submissão
       - key: SITE_URL
         sync: false

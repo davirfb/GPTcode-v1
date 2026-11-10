@@ -18,7 +18,7 @@
 -- usuario: contas que operam o painel administrativo (RF007, RNF001).
 -- O login e feito pelo Firebase Authentication: o banco NAO guarda senha. A conta
 -- e criada no primeiro acesso de um e-mail liberado em ADMIN_ALLOWED_EMAILS /
--- ADMIN_ALLOWED_DOMAINS; "ativo = 0" revoga o acesso sem apagar o historico.
+-- (lista fechada); "ativo = 0" revoga o acesso sem apagar o historico.
 --   admin  -> edita o conteudo
 --   api    -> conta tecnica do token da API
 -- ---------------------------------------------------------------------
