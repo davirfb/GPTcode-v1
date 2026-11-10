@@ -1,0 +1,25 @@
+{% extends 'admin/base.html' %}
+{% import '_campos.html' as c with context %}
+{% import 'admin/_lista_cadastro.html' as cadastro with context %}
+{% block title %}Projetos | GPTCode Admin{% endblock %}
+
+{% macro campos(f, erros) %}{{ c.campos_projeto(f, membros, erros) }}{% endmacro %}
+
+{% macro selos(projeto) %}
+<span class="badge bg-warning text-dark">{{ projeto.rotulo }}</span>
+<span class="badge bg-secondary">{{ projeto.status_rotulo }}</span>
+{% endmacro %}
+
+{% block content %}
+{{ cadastro.pagina({
+  'recurso': 'projeto',
+  'titulo': 'Edição de Projetos',
+  'descricao': 'Cadastre, edite ou remova projetos. Gere links para que alunos e orientadores enviem as informações.',
+  'lista': 'admin_projects', 'adicionar': 'admin_add_project',
+  'atualizar': 'admin_update_project', 'remover': 'admin_delete_project',
+  'rotulo_link': 'Gerar link para novo projeto', 'rotulo_adicionar': 'Adicionar novo projeto',
+  'rotulo_botao_novo': 'Adicionar projeto', 'rotulo_salvar': 'Salvar projeto', 'rotulo_remover': 'Remover projeto',
+  'confirmar_remocao': 'Remover este projeto? Publicações vinculadas perdem o vínculo.',
+  'vazio': 'Nenhum projeto cadastrado.',
+}, projetos, forms, campos, selos) }}
+{% endblock %}

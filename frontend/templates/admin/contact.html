@@ -1,0 +1,61 @@
+{% extends 'admin/base.html' %}
+{% import '_campos.html' as c with context %}
+{% block title %}Contato | GPTCode Admin{% endblock %}
+
+
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Edição de Contato</h1>
+    <p class="lead text-white-50">
+      Gerencie as formas de contato exibidas na página pública.
+    </p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-end mb-4">
+      <a href="#adicionar-contato" class="btn btn-warning">Adicionar forma de contato</a>
+    </div>
+
+    <div class="row g-4 mb-4">
+      {% for item in contatos %}
+      <div class="col-xl-6">
+        <div class="admin-item-card h-100">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi {{ item.icone }} fs-4 text-warning"></i>
+            <strong>{{ item.titulo }}</strong>
+            <span class="badge bg-secondary ms-auto">{{ item.tipo_rotulo }}</span>
+          </div>
+          <form method="post" action="{{ url_for('admin_update_contact', item_id=item.id) }}" class="admin-form">{{ csrf_campo() }}
+            {{ c.campos_contato(forms['contato-' ~ item.id], erros_form.get('contato-' ~ item.id, {})) }}
+            <button type="submit" class="btn btn-warning mt-4">Salvar</button>
+          </form>
+          <div class="mt-2">
+            <form method="post" action="{{ url_for('admin_delete_contact', item_id=item.id) }}"
+                  onsubmit="return confirm('Remover esta forma de contato?')">{{ csrf_campo() }}
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-12">
+        <p class="text-muted">Nenhuma forma de contato cadastrada ainda.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="admin-panel-card" id="adicionar-contato">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Adicionar forma de contato</h2>
+      </div>
+      <form method="post" action="{{ url_for('admin_add_contact') }}" class="admin-form">{{ csrf_campo() }}
+        {{ c.campos_contato(forms['contato-novo'], erros_form.get('contato-novo', {})) }}
+        <button type="submit" class="btn btn-warning mt-4">Adicionar contato</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

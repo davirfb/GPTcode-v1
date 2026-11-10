@@ -1,0 +1,123 @@
+{% extends 'admin/base.html' %}
+{% block title %}Dashboard | GPTCode Admin{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Dashboard Administrativo</h1>
+    <p class="lead text-white-50">
+      Gerencie o conteúdo principal do site mantendo o visual atual.
+    </p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row g-4 mb-5">
+      {% for rotulo, valor in [
+        ('Projetos', stats.projetos),
+        ('Publicações', stats.publicacoes),
+        ('Membros da equipe', stats.membros),
+        ('Submissões pendentes', stats.submissoes_pendentes),
+      ] %}
+      <div class="col-md-6 col-xl-3">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">{{ rotulo }}</span>
+          <strong class="admin-stat-value">{{ valor }}</strong>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Página Inicial</h2>
+            <p class="admin-panel-subtitle">
+              Edite o hero, slider do sobre, destaque principal, parceiros e cabeçalhos das páginas.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Hero atual: {{ cfg.hero_title }}</span>
+            <span>Imagens no slider: {{ stats.slider }} | Parceiros: {{ stats.parceiros }}</span>
+          </div>
+          <a href="{{ url_for('admin_home') }}" class="btn btn-warning mt-4">Editar início</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Projetos</h2>
+            <p class="admin-panel-subtitle">
+              Modalidade, período, situação, orientador, estudantes e descrição de cada projeto.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Total de projetos: {{ stats.projetos }}</span>
+          </div>
+          <a href="{{ url_for('admin_projects') }}" class="btn btn-warning mt-4">Editar projetos</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Publicações</h2>
+            <p class="admin-panel-subtitle">
+              Gerencie títulos, autores, veículo, DOI e links.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Total de publicações: {{ stats.publicacoes }}</span>
+          </div>
+          <a href="{{ url_for('admin_publications') }}" class="btn btn-warning mt-4">Editar publicações</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Equipe</h2>
+            <p class="admin-panel-subtitle">
+              Edite membros, categorias, tags, links de GitHub e Lattes e fotos.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Categorias: {{ stats.categorias }}</span>
+            <span>Membros: {{ stats.membros }}</span>
+          </div>
+          <a href="{{ url_for('admin_team') }}" class="btn btn-warning mt-4">Editar equipe</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Contato</h2>
+            <p class="admin-panel-subtitle">
+              Formas de contato da página pública e mensagens recebidas pelo formulário.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Formas de contato: {{ stats.contatos }}</span>
+            <span>Mensagens não lidas: {{ stats.mensagens_nao_lidas }}</span>
+          </div>
+          <a href="{{ url_for('admin_contact') }}" class="btn btn-warning mt-4">Editar contato</a>
+          <a href="{{ url_for('admin_mensagens') }}" class="btn btn-outline-warning mt-4 ms-2">Ver mensagens</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="admin-panel-card h-100">
+          <div class="admin-panel-head">
+            <h2 class="admin-panel-title">Submissões e links</h2>
+            <p class="admin-panel-subtitle">
+              Valide cadastros enviados por links de uso único e acompanhe os links ativos.
+            </p>
+          </div>
+          <div class="admin-summary-list">
+            <span>Aguardando validação: {{ stats.submissoes_pendentes }}</span>
+          </div>
+          <a href="{{ url_for('admin_pending') }}" class="btn btn-warning mt-4">Abrir submissões</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

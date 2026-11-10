@@ -1,0 +1,21 @@
+# Variáveis de ambiente e credenciais (nunca versionar)
+.env
+firebase-service-account*.json
+serviceAccountKey*.json
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Banco em uso: guarda e-mails de quem acessa o painel e mensagens de visitantes.
+# O conteúdo público inicial fica em backend/data/semente.db (versionado).
+backend/data/gptcode.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+backend/data/*.bak
+
+# Imagens enviadas pelo painel
+frontend/static/uploads/*
+!frontend/static/uploads/.gitkeep

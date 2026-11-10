@@ -1,0 +1,125 @@
+{% extends 'base.html' %} {% block title %}Contato | GPTCode{% endblock %} {% block content %}
+
+<!-- Header da Página -->
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Entre em Contato</h1>
+    <p class="lead text-white-50">
+      Conecte-se conosco para colaborações, oportunidades e informações
+    </p>
+  </div>
+</header>
+
+<!-- Conteúdo Principal -->
+<div class="container py-5">
+  <!-- Informações de Contato -->
+  <div class="row mb-5 justify-content-center">
+    {% for item in contatos %}
+    <div class="col-12 col-md-6 col-lg-auto mb-4 d-flex justify-content-center">
+      <div class="contact-info-card text-center contact-card-max-width">
+        <div class="contact-icon">
+          <i class="bi {{ item.icone }}"></i>
+        </div>
+        <h5>{{ item.titulo }}</h5>
+        {% if item.link %}
+        <a href="{{ item.link }}" style="white-space:pre-line;">{{ item.valor }}</a>
+        {% else %}
+        <p style="white-space:pre-line;">{{ item.valor }}</p>
+        {% endif %}
+        {% if item.subtitulo %}
+        <p class="small text-muted">{{ item.subtitulo }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Formulário de Contato -->
+  <div class="row justify-content-center mb-5">
+    <div class="col-12 col-lg-8">
+      <div class="admin-panel-card p-4">
+        <h4 class="mb-4 text-center">Envie uma mensagem</h4>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+          {% endfor %}
+        {% endwith %}
+        <form method="post" action="{{ url_for('contato') }}" novalidate>
+          {{ csrf_campo() }}
+          <!-- campo-isca: invisível para pessoas; robôs costumam preenchê-lo -->
+          <div class="d-none" aria-hidden="true">
+            <label for="site">Não preencha este campo</label>
+            <input type="text" id="site" name="site" tabindex="-1" autocomplete="off">
+          </div>
+          <div class="mb-3">
+            <label for="nome" class="form-label">Nome</label>
+            <input type="text" class="form-control {% if erros.nome_remetente %}is-invalid{% endif %}" id="nome" name="nome" value="{{ enviado.nome_remetente or '' }}" maxlength="120" required>
+            {% if erros.nome_remetente %}<div class="invalid-feedback">{{ erros.nome_remetente }}</div>{% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">E-mail</label>
+            <input type="email" class="form-control {% if erros.email_remetente %}is-invalid{% endif %}" id="email" name="email" value="{{ enviado.email_remetente or '' }}" maxlength="254" required>
+            {% if erros.email_remetente %}<div class="invalid-feedback">{{ erros.email_remetente }}</div>{% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="assunto" class="form-label">Assunto <span class="text-muted small">(opcional)</span></label>
+            <input type="text" class="form-control {% if erros.assunto %}is-invalid{% endif %}" id="assunto" name="assunto" value="{{ enviado.assunto or '' }}" maxlength="150">
+            {% if erros.assunto %}<div class="invalid-feedback">{{ erros.assunto }}</div>{% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="mensagem" class="form-label">Mensagem</label>
+            <textarea class="form-control {% if erros.mensagem %}is-invalid{% endif %}" id="mensagem" name="mensagem" rows="5" minlength="10" maxlength="5000" required>{{ enviado.mensagem or '' }}</textarea>
+            {% if erros.mensagem %}<div class="invalid-feedback">{{ erros.mensagem }}</div>{% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Enviar mensagem</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mapa ou Informações Adicionais -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <div class="info-section">
+        <h4 class="text-center mb-4">Sobre o GPTCode</h4>
+        <div class="row">
+          <div class="col-md-4 text-center mb-4">
+            <div class="info-item">
+              <i
+                class="bi bi-lightbulb text-accent contact-icon-large"
+              ></i>
+              <h6 class="mt-2">Pesquisa & Inovação</h6>
+              <p class="small text-muted">
+                Desenvolvemos soluções tecnológicas inovadoras
+              </p>
+            </div>
+          </div>
+          <div class="col-md-4 text-center mb-4">
+            <div class="info-item">
+              <i class="bi bi-people text-accent contact-icon-large"></i>
+              <h6 class="mt-2">Colaboração</h6>
+              <p class="small text-muted">
+                Trabalhamos em parceria com empresas e instituições
+              </p>
+            </div>
+          </div>
+          <div class="col-md-4 text-center mb-4">
+            <div class="info-item">
+              <i
+                class="bi bi-mortarboard text-accent contact-icon-large"
+              ></i>
+              <h6 class="mt-2">Formação</h6>
+              <p class="small text-muted">
+                Capacitamos estudantes em tecnologias de ponta
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

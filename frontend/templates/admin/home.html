@@ -1,0 +1,227 @@
+{% extends 'admin/base.html' %}
+{% import '_campos.html' as c with context %}
+{# o que foi digitado (e os erros) volta para o formulário certo depois de uma recusa #}
+{% macro rv(chave, campo, padrao='') %}{{ ((rascunhos or {}).get(chave) or {}).get(campo, padrao) }}{% endmacro %}
+{% macro inv(chave, campo) %}{{ 'is-invalid' if (erros_form.get(chave) or {}).get(campo) else '' }}{% endmacro %}
+{% macro msg(chave, campo) %}{{ c.erro(erros_form.get(chave) or {}, campo) }}{% endmacro %}
+{% block title %}Início | GPTCode Admin{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">Edição da Página Inicial</h1>
+    <p class="lead text-white-50">
+      Controle o hero, o slider do sobre, os destaques, os parceiros e os títulos das páginas.
+    </p>
+  </div>
+</header>
+
+<section class="py-5">
+  <div class="container">
+    <div class="admin-panel-card mb-5" id="textos">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Textos gerais</h2>
+        <p class="admin-panel-subtitle">
+          Atualize o hero, o texto do sobre, os botões da seção inicial e os cabeçalhos das páginas.
+        </p>
+      </div>
+      <form method="post" action="{{ url_for('admin_update_settings') }}" class="admin-form">{{ csrf_campo() }}
+        <input type="hidden" name="voltar" value="{{ url_for('admin_home') }}#textos" />
+        <div class="admin-form-grid">
+          <div class="admin-grid-span-2">
+            <label class="form-label">Título do hero</label>
+            <input class="form-control" name="hero_title" value="{{ cfg.hero_title }}" maxlength="2000" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Subtítulo do hero</label>
+            <input class="form-control" name="hero_subtitle" value="{{ cfg.hero_subtitle }}" maxlength="2000" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Título da seção Sobre</label>
+            <input class="form-control" name="about_title" value="{{ cfg.about_title }}" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Lead do sobre</label>
+            <textarea class="form-control" name="about_lead" rows="3">{{ cfg.about_lead }}</textarea>
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Descrição do sobre</label>
+            <textarea class="form-control" name="about_description" rows="3">{{ cfg.about_description }}</textarea>
+          </div>
+          <div>
+            <label class="form-label">Texto do botão principal</label>
+            <input class="form-control" name="about_primary_button_text" value="{{ cfg.about_primary_button_text }}" />
+          </div>
+          <div>
+            <label class="form-label">Link do botão principal</label>
+            <input class="form-control" name="about_primary_button_link" value="{{ cfg.about_primary_button_link }}" placeholder="/equipe" />
+          </div>
+          <div>
+            <label class="form-label">Texto do botão secundário</label>
+            <input class="form-control" name="about_secondary_button_text" value="{{ cfg.about_secondary_button_text }}" />
+          </div>
+          <div>
+            <label class="form-label">Link do botão secundário</label>
+            <input class="form-control" name="about_secondary_button_link" value="{{ cfg.about_secondary_button_link }}" placeholder="/publicacoes" />
+          </div>
+          <div class="admin-grid-span-2">
+            <label class="form-label">Título da seção de parceiros</label>
+            <input class="form-control" name="partners_title" value="{{ cfg.partners_title }}" />
+          </div>
+        </div>
+
+        <details class="mt-4">
+          <summary class="fw-semibold">Cabeçalhos das páginas Projetos, Publicações e Equipe</summary>
+          <div class="admin-form-grid mt-3">
+            {% for chave, rotulo in [
+              ('projects_page_title', 'Projetos - título'),
+              ('projects_page_subtitle', 'Projetos - subtítulo'),
+              ('projects_section_title', 'Projetos - título da seção'),
+              ('publications_page_title', 'Publicações - título'),
+              ('publications_page_subtitle', 'Publicações - subtítulo'),
+              ('publications_section_title', 'Publicações - título da seção'),
+              ('team_page_title', 'Equipe - título'),
+              ('team_page_subtitle', 'Equipe - subtítulo'),
+            ] %}
+            <div>
+              <label class="form-label">{{ rotulo }}</label>
+              <input class="form-control" name="{{ chave }}" value="{{ cfg[chave] }}" />
+            </div>
+            {% endfor %}
+          </div>
+        </details>
+        <button type="submit" class="btn btn-warning mt-4">Salvar textos</button>
+      </form>
+    </div>
+
+    <div class="admin-panel-card mb-5" id="slider">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Slider da seção Sobre</h2>
+        <p class="admin-panel-subtitle">
+          Adicione, troque ou remova imagens do carrossel.
+        </p>
+      </div>
+      <div class="row g-4">
+        {% for slide in slider %}
+        <div class="col-lg-6">
+          <div class="admin-item-card">
+            <form method="post" action="{{ url_for('admin_update_slider_image', item_id=slide.id) }}" enctype="multipart/form-data" class="admin-form">{{ csrf_campo() }}
+              <div class="mb-3">{{ c.campo_imagem('imagem', 'Imagem', slide.imagem, erros=erros_form.get('slide-' ~ slide.id) or {}, ajuda='escolha um arquivo para trocar', classe_previa='admin-preview-image') }}</div>
+              <label class="form-label">Texto alternativo</label>
+              <input class="form-control mb-4 {{ inv('slide-' ~ slide.id, 'texto_alternativo') }}" name="texto_alternativo" value="{{ rv('slide-' ~ slide.id, 'texto_alternativo', slide.texto_alternativo) }}" maxlength="150" required />
+              {{ msg('slide-' ~ slide.id, 'texto_alternativo') }}
+              <button type="submit" class="btn btn-warning">Salvar</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_delete_slider_image', item_id=slide.id) }}" class="mt-2"
+                  onsubmit="return confirm('Remover esta imagem do slider?')">{{ csrf_campo() }}
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover imagem</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+        <div class="col-lg-6">
+          <div class="admin-item-card admin-item-card-dashed">
+            <h3 class="admin-card-title">Adicionar nova imagem</h3>
+            <form method="post" action="{{ url_for('admin_add_slider_image') }}" enctype="multipart/form-data" class="admin-form">{{ csrf_campo() }}
+              <label class="form-label">Texto alternativo</label>
+              <input class="form-control mb-3 {{ inv('slide-novo', 'texto_alternativo') }}" name="texto_alternativo" value="{{ rv('slide-novo', 'texto_alternativo') }}" placeholder="Descrição da imagem" maxlength="150" required />
+              {{ msg('slide-novo', 'texto_alternativo') }}
+              <div class="mb-4">{{ c.campo_imagem('imagem', 'Imagem', erros=erros_form.get('slide-novo') or {}, obrigatorio=True, ajuda='PNG, JPG, GIF ou WEBP, até 8 MB', classe_previa='admin-preview-image') }}</div>
+              <button type="submit" class="btn btn-warning">Adicionar ao slider</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-panel-card mb-5" id="destaque">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Destaque principal</h2>
+        <p class="admin-panel-subtitle">
+          Escolha um projeto ou publicação para exibir em destaque na página inicial.
+        </p>
+      </div>
+      <form method="post" action="{{ url_for('admin_update_highlight') }}" class="admin-form">{{ csrf_campo() }}
+        {% set selecionado = destaque.tipo ~ ':' ~ destaque.item_id if destaque.item else 'nenhum' %}
+        <div class="mb-4">
+          <label class="form-label">Item em destaque</label>
+          <select class="form-select" name="highlight_selection">
+            <option value="nenhum" {% if selecionado == 'nenhum' %}selected{% endif %}>-- Nenhum (sem destaque) --</option>
+            {% if publicacoes %}
+            <optgroup label="Publicacoes">
+              {% for pub in publicacoes %}
+              <option value="publicacao:{{ pub.id }}" {% if selecionado == 'publicacao:' ~ pub.id %}selected{% endif %}>
+                [{{ pub.ano }}] {{ pub.titulo | truncate(80) }}
+              </option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
+            {% if projetos %}
+            <optgroup label="Projetos">
+              {% for proj in projetos %}
+              <option value="projeto:{{ proj.id }}" {% if selecionado == 'projeto:' ~ proj.id %}selected{% endif %}>
+                [{{ proj.rotulo }}] {{ proj.titulo | truncate(80) }}
+              </option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-warning">Salvar destaque</button>
+      </form>
+    </div>
+
+    <div class="admin-panel-card" id="parceiros">
+      <div class="admin-panel-head">
+        <h2 class="admin-panel-title">Parceiros e apoiadores</h2>
+        <p class="admin-panel-subtitle">
+          Cadastre logos com link ou remova os que não devem mais aparecer.
+        </p>
+      </div>
+      <div class="row g-4 mb-4">
+        {% for parceiro in parceiros %}
+        <div class="col-lg-6">
+          <div class="admin-item-card">
+            <form method="post" action="{{ url_for('admin_update_partner', item_id=parceiro.id) }}" enctype="multipart/form-data" class="admin-form">{{ csrf_campo() }}
+              <div class="mb-3">{{ c.campo_imagem('logo', 'Logo', parceiro.logo, erros=erros_form.get('parceiro-' ~ parceiro.id) or {}, ajuda='escolha um arquivo para trocar', classe_previa='admin-preview-image admin-preview-logo') }}</div>
+              <label class="form-label">Nome</label>
+              <input class="form-control mb-3 {{ inv('parceiro-' ~ parceiro.id, 'nome') }}" name="nome" value="{{ rv('parceiro-' ~ parceiro.id, 'nome', parceiro.nome) }}" maxlength="120" required />
+              {{ msg('parceiro-' ~ parceiro.id, 'nome') }}
+              <label class="form-label">Link <span class="text-muted fw-normal">(opcional, http:// ou https://)</span></label>
+              <input class="form-control mb-3 {{ inv('parceiro-' ~ parceiro.id, 'link') }}" name="link" type="url" value="{{ rv('parceiro-' ~ parceiro.id, 'link', parceiro.link or '') }}" />
+              {{ msg('parceiro-' ~ parceiro.id, 'link') }}
+              <button type="submit" class="btn btn-warning">Salvar</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_delete_partner', item_id=parceiro.id) }}" class="mt-2"
+                  onsubmit="return confirm('Remover este parceiro?')">{{ csrf_campo() }}
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remover parceiro</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="admin-item-card admin-item-card-dashed">
+        <h3 class="admin-card-title">Adicionar parceiro ou apoiador</h3>
+        <form method="post" action="{{ url_for('admin_add_partner') }}" enctype="multipart/form-data" class="admin-form">{{ csrf_campo() }}
+          <div class="admin-form-grid">
+            <div>
+              <label class="form-label">Nome</label>
+              <input class="form-control {{ inv('parceiro-novo', 'nome') }}" name="nome" value="{{ rv('parceiro-novo', 'nome') }}" maxlength="120" required />
+              {{ msg('parceiro-novo', 'nome') }}
+            </div>
+            <div>
+              <label class="form-label">Link <span class="text-muted fw-normal">(opcional)</span></label>
+              <input class="form-control {{ inv('parceiro-novo', 'link') }}" name="link" type="url" value="{{ rv('parceiro-novo', 'link') }}" placeholder="https://" />
+              {{ msg('parceiro-novo', 'link') }}
+            </div>
+            <div class="admin-grid-span-2">
+              {{ c.campo_imagem('logo', 'Logo', erros=erros_form.get('parceiro-novo') or {}, obrigatorio=True, ajuda='PNG, JPG, GIF ou WEBP, até 8 MB', classe_previa='admin-preview-image admin-preview-logo') }}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-warning mt-4">Adicionar parceiro</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

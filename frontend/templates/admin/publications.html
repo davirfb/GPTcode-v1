@@ -1,0 +1,25 @@
+{% extends 'admin/base.html' %}
+{% import '_campos.html' as c with context %}
+{% import 'admin/_lista_cadastro.html' as cadastro with context %}
+{% block title %}Publicações | GPTCode Admin{% endblock %}
+
+{% macro campos(f, erros) %}{{ c.campos_publicacao(f, projetos, erros) }}{% endmacro %}
+
+{% macro selos(publicacao) %}
+<span class="badge bg-warning text-dark">{{ publicacao.ano }}</span>
+<span class="badge bg-secondary">{{ publicacao.tipo_rotulo }}</span>
+{% endmacro %}
+
+{% block content %}
+{{ cadastro.pagina({
+  'recurso': 'publicacao',
+  'titulo': 'Edição de Publicações',
+  'descricao': 'Atualize títulos, autores, veículo, DOI e links das publicações.',
+  'lista': 'admin_publications', 'adicionar': 'admin_add_publication',
+  'atualizar': 'admin_update_publication', 'remover': 'admin_delete_publication',
+  'rotulo_link': 'Gerar link para nova publicação', 'rotulo_adicionar': 'Adicionar nova publicação',
+  'rotulo_botao_novo': 'Adicionar publicação', 'rotulo_salvar': 'Salvar publicação',
+  'rotulo_remover': 'Remover publicação', 'confirmar_remocao': 'Remover esta publicação?',
+  'vazio': 'Nenhuma publicação cadastrada.',
+}, publicacoes, forms, campos, selos) }}
+{% endblock %}

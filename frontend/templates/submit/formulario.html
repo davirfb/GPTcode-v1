@@ -1,0 +1,37 @@
+{#
+  Formulário público aberto por um link de uso único (membro, projeto ou publicação).
+  Os campos são os mesmos do painel (_campos.html).
+#}
+{% extends 'base.html' %}
+{% import '_campos.html' as c with context %}
+{% set nome = {'membro': 'Perfil', 'projeto': 'Projeto', 'publicacao': 'Publicação'}[recurso] %}
+{% set acao = 'Editar' if link.acao == 'editar' else 'Adicionar' %}
+{% block title %}{{ acao }} {{ nome }} | GPTCode{% endblock %}
+{% block content %}
+<header class="page-header d-flex align-items-center full-width-section">
+  <div class="container text-center">
+    <h1 class="display-4 text-white fw-bold">{{ acao }} {{ nome }}</h1>
+    <p class="lead text-white-50">
+      Preencha os dados abaixo. A submissão será revisada pela equipe antes de ser publicada.
+    </p>
+  </div>
+</header>
+
+<main class="py-5">
+  <div class="container" style="max-width:760px;">
+    <div class="card shadow-sm border-0 p-4 p-md-5">
+      {% include 'submit/_aviso.html' %}
+      <form method="post" {% if recurso == 'membro' %}enctype="multipart/form-data"{% endif %} novalidate>
+        {% if recurso == 'membro' %}
+          {{ c.campos_membro(f, categorias, erros, admin=False, foto_atual=foto_atual) }}
+        {% elif recurso == 'projeto' %}
+          {{ c.campos_projeto(f, membros, erros) }}
+        {% else %}
+          {{ c.campos_publicacao(f, projetos, erros) }}
+        {% endif %}
+        <button type="submit" class="btn btn-warning w-100 fw-semibold mt-4">Enviar para revisão</button>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}
