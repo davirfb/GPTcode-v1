@@ -23,7 +23,7 @@ para o git**. Ele guarda as mensagens do formulário de contato e os e-mails de 
 ## Login do painel
 
 O login do painel (`/admin`) é feito pelo **Firebase Authentication** (e-mail e senha). Só entram e-mails liberados em
-`ADMIN_ALLOWED_EMAILS` (ou domínios em `ADMIN_ALLOWED_DOMAINS`). As contas e senhas ficam no Firebase, não no site.
+`ADMIN_ALLOWED_EMAILS` (os e-mails que o proprietário liberar, separados por vírgula). As contas e senhas ficam no Firebase, não no site.
 
 ## Configuração (`.env`)
 

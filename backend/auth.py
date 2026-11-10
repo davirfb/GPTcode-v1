@@ -2,7 +2,7 @@
 
 * Painel: o login é feito pelo Firebase Authentication no navegador. O ID token
   (cookie `firebase_id_token`) é conferido pelo servidor com o Firebase Admin SDK e só
-  entram e-mails liberados em ADMIN_ALLOWED_EMAILS / ADMIN_ALLOWED_DOMAINS. A identidade
+  entram os e-mails listados em ADMIN_ALLOWED_EMAILS (só quem o proprietário liberar). A identidade
   então fica numa sessão Flask de 8 horas (o ID token do Firebase vale só 1 hora, e o
   painel não pode perder um formulário quando ele vence).
 * CSRF: todo POST do painel precisa do campo oculto csrf_token, gerado por sessão
@@ -98,19 +98,11 @@ def get_admin_allowed_emails() -> set[str]:
     return {item.strip().lower() for item in raw_value.split(",") if item.strip()}
 
 
-def get_admin_allowed_domains() -> set[str]:
-    raw_value = os.getenv("ADMIN_ALLOWED_DOMAINS", "")
-    return {item.strip().lower() for item in raw_value.split(",") if item.strip()}
-
-
 def is_admin_email_allowed(email: str) -> bool:
     normalized_email = email.strip().lower()
     if not normalized_email or "@" not in normalized_email:
         return False
-    if normalized_email in get_admin_allowed_emails():
-        return True
-    domain = normalized_email.rsplit("@", 1)[1]
-    return domain in get_admin_allowed_domains()
+    return normalized_email in get_admin_allowed_emails()
 
 
 def get_firebase_setup_issues() -> list[str]:
@@ -124,8 +116,8 @@ def get_firebase_setup_issues() -> list[str]:
             "Defina `FIREBASE_SERVICE_ACCOUNT_JSON` (conteudo JSON) ou "
             "`FIREBASE_SERVICE_ACCOUNT_PATH` (caminho do arquivo) para o Firebase Admin SDK."
         )
-    if not (get_admin_allowed_emails() or get_admin_allowed_domains()):
-        issues.append("Defina `ADMIN_ALLOWED_EMAILS` ou `ADMIN_ALLOWED_DOMAINS` para limitar o acesso ao admin.")
+    if not get_admin_allowed_emails():
+        issues.append("Defina `ADMIN_ALLOWED_EMAILS` com os e-mails que podem acessar o painel.")
     return issues
 
 
